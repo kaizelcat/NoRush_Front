@@ -5,10 +5,47 @@ export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     console.log('로그인 시도:', email, password);
-    navigation.replace('Main') // 로그인 → 즐겨찾기 이동
-  };
+const LOGIN_API_URL = 'https://165.229.125.173:8080/api/auth/signin'; // 실제 URL로 변경해야 합니다.
+
+    try {
+        const response = await fetch(LOGIN_API_URL, {
+            method: 'POST', // 데이터 전송은 POST 메서드를 사용합니다.
+            headers: {
+                // 서버에 JSON 데이터를 보낸다고 알려줍니다.
+                'Content-Type': 'application/json', 
+            },
+            // 2. 백엔드 DTO 규격에 맞춰 데이터를 JSON 문자열로 변환하여 보냅니다.
+            // DTO에서 필드 이름이 'email'과 'password'였으므로, 여기서도 그대로 사용합니다.
+            body: JSON.stringify({ 
+                email: email, 
+                password: password,
+            }),
+        });
+
+        // 3. 서버 응답 처리
+        if (response.ok) {
+            // HTTP 상태 코드가 200번대인 경우 (성공)
+            const data = await response.json();
+            console.log('로그인 성공:', data);
+            
+            // 성공 시 메인 화면으로 이동
+            navigation.replace('Main');
+        } else {
+            // HTTP 상태 코드가 400, 500번대인 경우 (실패)
+            const errorData = await response.json();
+            console.error('로그인 실패:', errorData);
+
+            // 실패 메시지를 사용자에게 보여주는 로직 추가 (예: Alert.alert)
+            alert(errorData.message || '로그인에 실패했습니다.'); 
+        }
+    } catch (error) {
+        // 네트워크 연결 등 예상치 못한 오류 발생
+        console.error('네트워크 오류:', error);
+        alert('서버와 통신하는 중 문제가 발생했습니다.');
+    }
+};
 
   const handleSocialLogin = (provider) => {
     console.log(`${provider} 로그인 시도`);
