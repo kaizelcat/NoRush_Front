@@ -1,2 +1,1 @@
-const KAKAO_JAVASCRIPT_KEY = "3ec9e3ea548f2ff52c7584d3ae19cf7c";
-export {KAKAO_JAVASCRIPT_KEY};
+## 재발급 받았으므로 개인적으로 전달드린 파일로 덮어써주세요! 
