@@ -1,0 +1,2 @@
+const KAKAO_JAVASCRIPT_KEY = "3ec9e3ea548f2ff52c7584d3ae19cf7c";
+export {KAKAO_JAVASCRIPT_KEY};
