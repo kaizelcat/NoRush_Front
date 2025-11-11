@@ -7,6 +7,7 @@ import { FavoritesProvider } from './contexts/FavoritesContext';
 // Screens
 import LoginScreen from './screens/LoginScreen';
 import RegisterScreen from './screens/RegisterScreen';
+import RouteResultScreen from'./screens/RouteResultsScreen';
 
 // Navigation
 import MainTabs from './navigation/MainTabs';
@@ -32,6 +33,11 @@ export default function App() {
             name="Main"
             component={MainTabs}
             options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="RouteResult"
+            component={RouteResultScreen}
+            options={{title: '경로 결과'}}
           />
 
         </Stack.Navigator>

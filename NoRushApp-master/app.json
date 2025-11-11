@@ -19,7 +19,6 @@
       },
       "edgeToEdgeEnabled": true
     },
-
     "plugins": [
       [
         "expo-splash-screen",
@@ -29,7 +28,9 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
-      ]
+      ],
+      "expo-font",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true

@@ -1,214 +1,352 @@
-// routeResults.js
-// import { Feather } from '@expo/vector-icons';
-// import { useLocalSearchParams } from 'expo-router';
-// import { useState } from 'react';
-import { Feather } from '@expo/vector-icons';
-import { useNavigation, useRoute } from '@react-navigation/native';
-import { useState } from 'react';
+// screens/RouteResultsScreen.js
+import React, { useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
   View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  Alert,
+  Animated,
+  Platform,
+  StatusBar,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 
-const tabs = ['빠른 경로', '버스', '지하철', '도보'];
+// ---- 설정값 ----
+const HERO_MAX_HEIGHT = 180;
+const COLLAPSE_DISTANCE = 110;
+const STICKY_SHOW_AT = COLLAPSE_DISTANCE * 0.9;
+const MIN_EXTRA_SCROLL = 320;
 
-const routes = [
-  {
-    id: 'bus-transit',
-    name: '버스 이용 경로',
-    type: '버스',
-    icon: 'activity',
-    duration: 38,
-    distance: '9.1 km',
-    congestionPercentage: 35,
-    cost: '₩1,250',
-    costType: '요금',
-    recommended: false,
-    estimatedArrival: '오후 3:38',
-    trafficStatus: '보통',
-  },
-  {
-    id: 'subway-fast',
-    name: '지하철 급행',
-    type: '지하철',
-    icon: 'train',
-    duration: 30,
-    distance: '10.5 km',
-    congestionPercentage: 45,
-    cost: '₩1,350',
-    costType: '요금',
-    recommended: false,
-    estimatedArrival: '오후 3:35',
-    trafficStatus: '약간 혼잡',
-  },
-  {
-    id: 'bike-route',
-    name: '자전거 도로',
-    type: '도보',
-    icon: 'activity',
-    duration: 52,
-    distance: '11.2 km',
-    congestionPercentage: 0,
-    cost: '₩0',
-    costType: '무료',
-    recommended: false,
-    estimatedArrival: '오후 3:52',
-    trafficStatus: '매우 원활',
-  },
-];
+// 혼잡도 색상
+const getCongestionStyle = (level) => {
+  switch (level) {
+    case '매우 혼잡': return { bg: '#FDECEC', fg: '#B81E1E', bd: '#F8CACA' };
+    case '혼잡':     return { bg: '#EEF5FF', fg: '#1E5BB8', bd: '#D9E7FF' };
+    case '보통':     return { bg: '#FFF7E6', fg: '#8A5A00', bd: '#FFE3B3' };
+    case '여유':     return { bg: '#E6F9EF', fg: '#127C50', bd: '#BFEEDB' };
+    default:         return { bg: '#EEE', fg: '#333', bd: '#DDD' };
+  }
+};
 
-export default function RouteResultsScreen() {
-  const [selectedRoute, setSelectedRoute] = useState(null);
-  const [selectedTab, setSelectedTab] = useState('빠른 경로');
-  const [favorites, setFavorites] = useState({});
-  // const { startPoint, endPoint } = useLocalSearchParams();
-  const navigation = useNavigation();
-  const route = useRoute();
-  const { startPoint, endPoint } = route.params;
+export default function RouteResultScreen({ route, navigation }) {
+  // ✅ 목업 제거: 전달된 데이터 없으면 null
+  const routeData = route?.params?.routeData || null;
 
-  const handleSelect = (id) => {
-    setSelectedRoute(id);
-    setTimeout(() => {}, 300);
-  };
+  // ✅ 데이터 없을 때 빈 상태 먼저 리턴 (여기서 끝)
+  if (!routeData) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+        <Text style={{ fontSize: 16, color: '#222', marginBottom: 12 }}>경로 데이터가 없습니다.</Text>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#1E5BB8', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 999 }}
+          activeOpacity={0.85}
+        >
+        <Text style={{ color:'#fff', fontWeight:'700' }}>뒤로가기</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
-  const toggleFavorite = (id) => {
-    setFavorites((prev) => ({ ...prev, [id]: !prev[id] }));
-  };
+  const [isFavorited, setIsFavorited] = useState(true);
+  const [selectedCar, setSelectedCar] = useState(null);
 
-  const filteredRoutes =
-    selectedTab === '빠른 경로'
-      ? routes
-      : routes.filter((route) => route.type === selectedTab);
+  const etaMinutes = routeData?.etaMinutes ?? '-';
+
+  // 스크롤 애니메이션
+  const scrollY = useRef(new Animated.Value(0)).current;
+
+  const heroHeight = scrollY.interpolate({
+    inputRange: [0, COLLAPSE_DISTANCE],
+    outputRange: [HERO_MAX_HEIGHT, 0],
+    extrapolate: 'clamp',
+  });
+  const heroOpacity = scrollY.interpolate({
+    inputRange: [0, COLLAPSE_DISTANCE * 0.6, COLLAPSE_DISTANCE],
+    outputRange: [1, 0.2, 0],
+    extrapolate: 'clamp',
+  });
+  const etaScale = scrollY.interpolate({
+    inputRange: [0, COLLAPSE_DISTANCE],
+    outputRange: [1, 0.9],
+    extrapolate: 'clamp',
+  });
+
+  const stickyOpacity = scrollY.interpolate({
+    inputRange: [STICKY_SHOW_AT - 10, STICKY_SHOW_AT, STICKY_SHOW_AT + 40],
+    outputRange: [0, 0.01, 1],
+    extrapolate: 'clamp',
+  });
+  const stickyTranslateY = scrollY.interpolate({
+    inputRange: [STICKY_SHOW_AT, STICKY_SHOW_AT + 40],
+    outputRange: [-10, 0],
+    extrapolate: 'clamp',
+  });
+
+  const statusBarTop = Platform.OS === 'android' ? (StatusBar.currentHeight || 0) : 0;
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.headerBox}>
-        <Text style={styles.headerTitle}>검색 결과</Text>
-        <Text>
-          {startPoint} → {endPoint}
-        </Text>
-      </View>
+    <View style={{ flex: 1, backgroundColor: '#fff' }}>
+      {/* ── 큰 히어로 (접힘) ── */}
+      <Animated.View style={[styles.heroShell, { height: heroHeight, opacity: heroOpacity, overflow: 'hidden' }]}>
+        <LinearGradient
+          colors={['#1E5BB8', '#2A6DE0']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        <View style={styles.heroContent}>
+          <View style={styles.heroTopRow}>
+            {/* 작은 뒤로가기 버튼 */}
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backInlineButton} activeOpacity={0.8}>
+              <Ionicons name="chevron-back" size={18} color="#1E5BB8" />
+              <Text style={styles.backInlineText}>뒤로가기</Text>
+            </TouchableOpacity>
 
-      <View style={styles.statsBox}>
-        <StatBox label="경로 수" value={filteredRoutes.length.toString()} color="#3B82F6" />
-        <StatBox label="소요 시간" value="28–52" color="#10B981" />
-      </View>
-
-      <View style={styles.tabContainer}>
-        {tabs.map((tab) => (
-          <TouchableOpacity
-            key={tab}
-            style={[styles.tab, selectedTab === tab && styles.activeTab]}
-            onPress={() => setSelectedTab(tab)}
-          >
-            <Text style={[styles.tabText, selectedTab === tab && styles.activeTabText]}>
-              {tab}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {filteredRoutes.map((route) => (
-        <TouchableOpacity
-          key={route.id}
-          style={[styles.routeCard, route.recommended && styles.routeCardRecommended]} // selected 스타일은 일단 제거
-          // onPress를 navigation으로 변경합니다.
-          onPress={() => navigation.navigate('SubwayCongestion', {
-            routeId: route.id,
-            routeName: route.name,
-          })}
-        >
-          <View style={styles.routeHeader}>
-            <Feather name={route.icon} size={24} color="#1F2937" />
-            <View style={styles.routeNameRow}>
-              <Text style={styles.routeName}>{route.name}</Text>
-              <TouchableOpacity onPress={() => toggleFavorite(route.id)}>
-                <Feather
-                  name={favorites[route.id] ? 'star' : 'star'}
-                  size={20}
-                  color={favorites[route.id] ? '#FBBF24' : '#D1D5DB'}
-                  style={styles.favoriteIcon}
-                />
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <TouchableOpacity style={styles.iconButtonGhost} onPress={() => setIsFavorited((prev) => !prev)}>
+                <Ionicons name={isFavorited ? 'heart' : 'heart-outline'} size={22} color="#fff" />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.iconButtonGhost} onPress={() => Alert.alert('공유', '이 경로를 공유합니다.')}>
+                <Ionicons name="share-social-outline" size={22} color="#fff" />
               </TouchableOpacity>
             </View>
-            <View style={styles.rightAlign}>
-              {selectedRoute === route.id ? (
-                <ActivityIndicator color="#3B82F6" size="small" />
-              ) : (
-                <>
-                  <Text style={styles.duration}>{route.duration}분</Text>
-                  <Text style={styles.distance}>{route.distance}</Text>
-                </>
-              )}
+          </View>
+
+          {/* 타이틀 + 출발→도착 + ETA 칩 */}
+          <View style={{ marginTop: 8 }}>
+            <Text style={styles.heroTitle}>{routeData?.customName ?? '경로 상세'}</Text>
+            <View style={styles.heroSubRow}>
+              <Ionicons name="location-outline" size={16} color="rgba(255,255,255,0.85)" />
+              <Text style={styles.heroSubText}>{routeData?.start ?? '-'}</Text>
+              <Ionicons name="arrow-forward" size={16} color="rgba(255,255,255,0.85)" />
+              <Text style={styles.heroSubText}>{routeData?.end ?? '-'}</Text>
+
+              {/* ETA 칩 */}
+              <View style={styles.etaChip}>
+                <Ionicons name="time-outline" size={12} color="#1E5BB8" />
+                <Text style={styles.etaChipText}>{etaMinutes}분</Text>
+              </View>
             </View>
           </View>
 
-          <View style={styles.metricsBox}>
-            <Text style={styles.metricLabel}>혼잡도: {getCongestionLabel(route.congestionPercentage)}</Text>
-            <Text style={styles.metricLabel}>비용: {route.cost} ({route.costType})</Text>
-            <Text style={styles.metricLabel}>도착 예정: {route.estimatedArrival}</Text>
-          </View>
-        </TouchableOpacity>
-      ))}
-    </ScrollView>
-  );
-}
+          {/* 큰 ETA */}
+          <Animated.View style={[styles.heroEtaBox, { transform: [{ scale: etaScale }] }]}>
+            <Text style={styles.heroEta}>{etaMinutes}분</Text>
+            <Text style={styles.heroEtaSub}>예상 소요시간</Text>
+          </Animated.View>
+        </View>
+      </Animated.View>
 
-function StatBox({ label, value, color }) {
-  return (
-    <View style={styles.statBox}>
-      <Text style={{ fontSize: 20, fontWeight: 'bold', color }}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
+      {/* ── 스티키 헤더 (접히면 등장: 출발→도착 + ETA) ── */}
+      <Animated.View
+        pointerEvents="box-none"
+        style={[
+          styles.stickyHeader,
+          { paddingTop: statusBarTop + 4, opacity: stickyOpacity, transform: [{ translateY: stickyTranslateY }] },
+        ]}
+      >
+        <View style={styles.stickyBar}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.stickyBackBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Ionicons name="chevron-back" size={22} color="#1E5BB8" />
+          </TouchableOpacity>
+
+          <View style={{ flex: 1, alignItems: 'center' }}>
+            <Text style={styles.stickyTitle} numberOfLines={1}>
+              {(routeData?.start ?? '-')} → {(routeData?.end ?? '-')}
+            </Text>
+            <Text style={styles.stickyEta}>{etaMinutes}분</Text>
+          </View>
+
+          <View style={{ width: 32 }} />
+        </View>
+      </Animated.View>
+
+      {/* ── 본문 ── */}
+      <Animated.ScrollView
+        contentContainerStyle={{
+          paddingBottom: 24,
+          minHeight: HERO_MAX_HEIGHT + MIN_EXTRA_SCROLL,
+        }}
+        scrollEventThrottle={16}
+        onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: false })}
+      >
+        {/* 타임라인 + 구간/칸 */}
+        <View style={{ paddingHorizontal: 16, marginTop: 12 }}>
+          <View style={styles.card}>
+            {routeData?.segments?.map((segment, idx) => (
+              <View key={`${segment.line}-${idx}`} style={{ marginBottom: idx < routeData.segments.length - 1 ? 18 : 6 }}>
+                <View style={{ flexDirection: 'row' }}>
+                  <View style={styles.timelineCol}>
+                    <View style={styles.timelineDot} />
+                    {idx < routeData.segments.length - 1 && <View style={styles.timelineLine} />}
+                  </View>
+
+                  <View style={{ flex: 1, paddingBottom: 8 }}>
+                    <View style={[styles.badge, { backgroundColor: '#F2F7FF', borderColor: '#D9E7FF', alignSelf: 'flex-start' }]}>
+                      <Text style={[styles.badgeText, { color: '#1E5BB8' }]}>{segment.line}</Text>
+                    </View>
+                    <Text style={styles.segmentText}>
+                      {segment.from} → {segment.to}
+                    </Text>
+
+                    {Array.isArray(segment.cars) && segment.cars.length > 0 && (
+                      <View style={{ marginTop: 10 }}>
+                        <Text style={styles.sectionLabel}>칸 선택 (혼잡도 확인)</Text>
+                        <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+                          {segment.cars.map((car) => {
+                            const c = getCongestionStyle(car.level);
+                            const active = selectedCar === car.car;
+                            return (
+                              <TouchableOpacity
+                                key={`car-${car.car}`}
+                                onPress={() => setSelectedCar(car.car)}
+                                activeOpacity={0.9}
+                                style={[
+                                  styles.carBox,
+                                  { borderColor: active ? '#1E5BB8' : '#E6E6E6', transform: [{ scale: active ? 1.03 : 1 }] },
+                                ]}
+                              >
+                                <Text style={styles.carLabel}>{car.car}호</Text>
+                                <View style={[styles.badge, { backgroundColor: c.bg, borderColor: c.bd }]}>
+                                  <Text style={[styles.badgeText, { color: c.fg }]}>{car.level}</Text>
+                                </View>
+                              </TouchableOpacity>
+                            );
+                          })}
+                        </View>
+                      </View>
+                    )}
+                  </View>
+                </View>
+              </View>
+            ))}
+
+            {/* 도착점 */}
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <View style={styles.timelineCol}>
+                <View style={styles.timelineDot} />
+              </View>
+              <View>
+                <Text style={{ fontWeight: '600', fontSize: 14, color: '#111' }}>{routeData?.end ?? '-'}</Text>
+                <Text style={{ fontSize: 12, color: '#666', marginTop: 2 }}>도착</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* 다른 시간 */}
+        <View style={{ marginTop: 16 }}>
+          <View style={{ paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Ionicons name="time-outline" size={18} color="#111" />
+              <Text style={{ fontWeight: '700', fontSize: 15, color: '#111' }}>다른 시간</Text>
+            </View>
+          </View>
+
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 10, gap: 10 }}>
+            {routeData?.alternatives?.map((alt, idx) => {
+              const c = getCongestionStyle(alt.avgCongestion);
+              return (
+                <TouchableOpacity
+                  key={`alt-${idx}`}
+                  activeOpacity={0.9}
+                  style={styles.altCard}
+                  onPress={() => Alert.alert('대체 시간', `${alt.time} / 예상 ${alt.etaMinutes}분`)}
+                >
+                  <Text style={{ fontSize: 18, fontWeight: '700', color: '#111', marginBottom: 4 }}>{alt.time}</Text>
+                  <Text style={{ fontSize: 12, color: '#666', marginBottom: 8 }}>{alt.etaMinutes}분</Text>
+                  <View style={[styles.badge, { backgroundColor: c.bg, borderColor: c.bd, alignSelf: 'flex-start' }]}>
+                    <Text style={[styles.badgeText, { color: c.fg }]}>{alt.avgCongestion}</Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+      </Animated.ScrollView>
     </View>
   );
 }
 
-function getCongestionLabel(percent) {
-  if (percent <= 30) return '원활';
-  if (percent <= 60) return '보통';
-  if (percent <= 80) return '혼잡';
-  return '매우 혼잡';
-}
-
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#EFF6FF' },
-  headerBox: { padding: 16, backgroundColor: '#FFFFFF' },
-  headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#111827' },
-  subText: { fontSize: 14, color: '#6B7280' },
-  statsBox: { flexDirection: 'row', justifyContent: 'space-around', marginVertical: 12 },
-  tabContainer: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 12 },
-  tab: {
+  heroShell: { width: '100%' },
+  heroContent: { paddingTop: 54, paddingHorizontal: 16, paddingBottom: 18 },
+  heroTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+
+  backInlineButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 10,
     paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    backgroundColor: '#E5E7EB',
+    borderRadius: 999,
   },
-  activeTab: { backgroundColor: '#3B82F6' },
-  tabText: { fontSize: 14, color: '#374151' },
-  activeTabText: { color: '#FFFFFF', fontWeight: 'bold' },
-  statBox: { alignItems: 'center' },
-  statLabel: { fontSize: 12, color: '#6B7280' },
-  routeCard: {
-    margin: 10,
-    padding: 16,
-    borderRadius: 12,
+  backInlineText: { color: '#1E5BB8', fontWeight: '700', marginLeft: 4 },
+
+  iconButtonGhost: { height: 40, width: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+  heroTitle: { color: '#fff', fontSize: 22, fontWeight: '800', marginTop: 8 },
+
+  heroSubRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6, flexWrap: 'wrap' },
+  heroSubText: { color: 'rgba(255,255,255,0.9)', fontSize: 13, fontWeight: '600' },
+
+  etaChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+    marginLeft: 6,
   },
-  routeCardSelected: { borderColor: '#3B82F6', backgroundColor: '#DBEAFE' },
-  routeCardRecommended: { borderColor: '#10B981', backgroundColor: '#D1FAE5' },
-  routeHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  routeNameRow: { flexDirection: 'row', alignItems: 'center', flexShrink: 1 },
-  routeName: { fontSize: 16, fontWeight: 'bold', textAlign: 'left', color: '#1F2937' },
-  favoriteIcon: { marginLeft: 8 },
-  rightAlign: { alignItems: 'flex-end', minWidth: 64 },
-  duration: { fontSize: 18, fontWeight: 'bold', color: '#111827' },
-  distance: { fontSize: 12, color: '#6B7280' },
-  metricsBox: { marginTop: 12 },
-  metricLabel: { fontSize: 12, color: '#4B5563', marginBottom: 2 },
+  etaChipText: { color: '#1E5BB8', fontSize: 12, fontWeight: '800', marginLeft: 3 },
+
+  heroEtaBox: { paddingVertical: 18, alignItems: 'center' },
+  heroEta: { color: '#fff', fontSize: 44, fontWeight: '900' },
+  heroEtaSub: { color: 'rgba(255,255,255,0.85)', marginTop: 4 },
+
+  stickyHeader: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 20 },
+  stickyBar: {
+    height: 48,
+    backgroundColor: '#FFFFFFEE',
+    borderBottomWidth: 1,
+    borderBottomColor: '#EAEAEA',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+  },
+  stickyBackBtn: { paddingHorizontal: 4, paddingVertical: 2 },
+  stickyTitle: { fontSize: 15, fontWeight: '700', color: '#111' },
+  stickyEta: { fontSize: 12, color: '#1E5BB8', marginTop: 2, fontWeight: '800' },
+
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#ECECEC',
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+
+  timelineCol: { width: 20, alignItems: 'center', marginRight: 8 },
+  timelineDot: { width: 10, height: 10, borderRadius: 999, backgroundColor: '#1E5BB8', borderWidth: 3, borderColor: '#fff' },
+  timelineLine: { width: 2, flex: 1, backgroundColor: '#E1E5EC', marginTop: 4 },
+
+  segmentText: { marginTop: 6, color: '#666', fontSize: 13 },
+  sectionLabel: { fontSize: 12, color: '#666', fontWeight: '700', marginBottom: 6 },
+
+  carBox: { borderWidth: 2, borderRadius: 12, paddingVertical: 10, paddingHorizontal: 12, minWidth: 90 },
+  carLabel: { fontSize: 12, color: '#666', marginBottom: 6, fontWeight: '600' },
+
+  badge: { paddingVertical: 5, paddingHorizontal: 10, borderRadius: 999, borderWidth: 1 },
+  badgeText: { fontSize: 12, fontWeight: '700' },
+
+  altCard: { width: 120, borderRadius: 12, borderWidth: 1, borderColor: '#ECECEC', backgroundColor: '#fff', padding: 12 },
 });

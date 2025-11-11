@@ -64,12 +64,14 @@ export default function FavoritesScreen({ navigation }) {
     },
   ])
 
+  // ✅ 즐겨찾기 삭제
   const handleDelete = (id) => {
     setFavorites((prevFavorites) =>
       prevFavorites.filter((item) => item.id !== id)
     )
   }
 
+  // ✅ 즐겨찾기 이름 변경
   const handleRename = (id) => {
     Alert.prompt(
       "Rename Route",
@@ -86,30 +88,30 @@ export default function FavoritesScreen({ navigation }) {
     )
   }
 
+  // ✅ 옵션 창
   const showOptions = (item) => {
     Alert.alert(
       "Options",
       "",
       [
-        {
-          text: "경로명 수정",
-          onPress: () => handleRename(item.id),
-        },
-        {
-          text: "경로 삭제",
-          onPress: () => handleDelete(item.id),
-          style: "destructive",
-        },
+        { text: "경로명 수정", onPress: () => handleRename(item.id) },
+        { text: "경로 삭제", onPress: () => handleDelete(item.id), style: "destructive" },
         { text: "취소", style: "cancel" },
       ],
       { cancelable: true }
     )
   }
 
+  // ✅ 검색 필터
   const filteredFavorites = favorites.filter((item) =>
     item.route.toLowerCase().includes(searchQuery.toLowerCase()) ||
     item.customName.toLowerCase().includes(searchQuery.toLowerCase())
   )
+
+  // ✅ 추가된 부분: RouteResultScreen으로 이동 함수
+  const handleOpenRoute = (item) => {
+    navigation.navigate("RouteResult", { routeData: item })
+  }
 
   return (
     <View style={styles.container}>
@@ -145,7 +147,12 @@ export default function FavoritesScreen({ navigation }) {
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ padding: 16 }}
           renderItem={({ item }) => (
-            <View style={styles.card}>
+            // ✅ 카드 전체를 TouchableOpacity로 변경 → 탭하면 이동
+            <TouchableOpacity
+              style={styles.card}
+              activeOpacity={0.85}
+              onPress={() => handleOpenRoute(item)}
+            >
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
@@ -165,7 +172,7 @@ export default function FavoritesScreen({ navigation }) {
                   <Ionicons name="ellipsis-vertical" size={20} color="#555" />
                 </TouchableOpacity>
               </View>
-            </View>
+            </TouchableOpacity>
           )}
         />
       )}
@@ -230,7 +237,7 @@ const styles = StyleSheet.create({
   badgeText: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#333",
+    color: "#fff",
   },
   congestionBadge: (level) => {
     switch (level) {
