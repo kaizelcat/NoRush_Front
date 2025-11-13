@@ -3,14 +3,37 @@ import { StatusBar } from 'expo-status-bar';
 import { Keyboard, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View, Alert } from 'react-native';
 import React, { useState, useRef } from 'react'; 
 import KakaoMapView from '../components/KakaoMapView'; 
+import { MaterialIcons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
 
 const MainScreen = () => {
   const navigation = useNavigation();
 
   const [startStation, setStartStation] = useState('');
   const [endStation, setEndStation] = useState('');
-
+  
   const mapViewRef = useRef(null); 
+
+  // 현재 위치 가져오기 (실제 GPS)
+  const getMyCoordinates = async () => {
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert("위치 권한이 필요합니다.");
+      return null;
+    }
+
+    const location = await Location.getCurrentPositionAsync({});
+    return location.coords; // { latitude, longitude }
+  };
+
+  // setter에 좌표 넣어주는 함수
+  const handleUseMyLocation = async (setter) => {
+    const coords = await getMyCoordinates();
+    if (!coords) return;
+    console.log("내 좌표(lat, lng):", coords.latitude, coords.longitude);
+    // 입력칸에 좌표 넣기
+    setter(`${coords.latitude.toFixed(5)}, ${coords.longitude.toFixed(5)}`);
+  };
 
   const handleSearch = async () => {
     if (!startStation || !endStation) {
@@ -49,28 +72,62 @@ const MainScreen = () => {
     //   Alert.alert("오류", "경로를 검색하는 중 문제가 발생했습니다.");
     // }
   };
+const swapLocations = () => {
+        const temp = startStation;
+        setStartStation(endStation);
+        setEndStation(temp);
+    };
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.container}>
-          <StatusBar style='dark-content' /> 
+          <StatusBar style='dark-content' />
 
           <View style={styles.searchContainer}>
+            {/*출발지 입력*/}
+            <View style={styles.locationRow}>
+              
             <TextInput
-              style={styles.searchInput}
-              placeholder="출발지 (예: 강남)"
-              placeholderTextColor="#888"
-              value={startStation} 
-              onChangeText={setStartStation} 
-            />
-            <TextInput
-              style={[styles.searchInput, {marginTop: 10}]}
-              placeholder="도착지 (예: 사당)"
-              placeholderTextColor="#888"
-              value={endStation}
-              onChangeText={setEndStation} 
-            />
+                style={styles.searchInput}
+                placeholder="출발지 (예: 강남)"
+                placeholderTextColor="#888"
+                value={startStation} 
+                onChangeText={setStartStation} 
+              />
+              {/*현재 위치 버튼*/}
+              <TouchableOpacity
+                style={styles.locationIconWrapper}
+                onPress={() => handleUseMyLocation(setStartStation)}
+              >
+                <MaterialIcons name="my-location" size={20} color="#777" />
+              </TouchableOpacity>
+            </View>
+
+            {/*Swap*/}
+            <View style={styles.centered}>
+              <TouchableOpacity style={styles.swapBtn} onPress={swapLocations}>
+                <MaterialIcons name="swap-vert" size={24} color="#4b5563" />
+              </TouchableOpacity>
+            </View>
+            
+            {/*도착지 입력*/}
+            <View style={[styles.locationRow, {marginTop: 10}]}>
+              <TextInput
+                style={styles.searchInput}
+                placeholder="도착지 (예: 사당)"
+                placeholderTextColor="#888"
+                value={endStation}
+                onChangeText={setEndStation} 
+              />
+              <TouchableOpacity
+                style={styles.locationIconWrapper}
+                onPress={() => handleUseMyLocation(setEndStation)}
+              >
+                <MaterialIcons name="my-location" size={20} color="#777" />
+              </TouchableOpacity>
+            </View>
+            {/*검색 버튼*/}
             <TouchableOpacity 
               style={styles.findPathButton} 
               onPress={handleSearch} 
@@ -78,7 +135,7 @@ const MainScreen = () => {
               <Text style={styles.buttonText}>혼잡도 경로 검색</Text>
             </TouchableOpacity>
           </View>
-
+          {/*카카오 맵*/}
           <View style={styles.mapContainer}>
             <KakaoMapView ref={mapViewRef} style={styles.mapView} /> 
           </View>
@@ -89,51 +146,78 @@ const MainScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  container: {
-    flex: 1,
-    paddingHorizontal: 15, 
-  },
-  searchContainer: {
-    marginTop: 30,
-    paddingVertical: 10,
-  },
-  searchInput: {
-    height: 48,
-    backgroundColor: '#f0f2f5', 
-    borderRadius: 12, 
-    paddingHorizontal: 15,
-    fontSize: 16,
-  },
-  findPathButton: {
-    marginTop: 10, 
-    width: '100%', 
-    height: 48,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#416cec', 
-    borderRadius: 12, 
-    paddingHorizontal: 15,
-  },
-  buttonText: {
-    color: '#fff', 
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  mapContainer: {
-    flex: 1,
-    borderRadius: 15, 
-    overflow: 'hidden', 
-    marginVertical: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3, 
-  },
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  container: {
+    flex: 1,
+    paddingHorizontal: 15,
+  },
+  searchContainer: {
+    marginTop: 30,
+    paddingVertical: 10,
+  },
+
+  // 한 줄 전체 박스 (출발지/도착지 공통)
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f0f2f5',
+    borderRadius: 12,
+    height: 48,
+    paddingHorizontal: 10,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#111',
+  },
+  locationIconWrapper: {
+    width: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 6,
+  },
+
+  centered: {
+    alignItems: 'center',
+    marginVertical: 6,
+  },
+  swapBtn: {
+    backgroundColor: 'white',
+    borderRadius: 999,
+    padding: 6,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+
+  findPathButton: {
+    marginTop: 10,
+    width: '100%',
+    height: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#416cec',
+    borderRadius: 12,
+    paddingHorizontal: 15,
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  mapContainer: {
+    flex: 1,
+    borderRadius: 15,
+    overflow: 'hidden',
+    marginVertical: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
 });
 
 export default MainScreen;
