@@ -1,94 +1,139 @@
 import { useNavigation } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
-import { Image, Keyboard, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
+import { Keyboard, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View, Alert } from 'react-native';
+import React, { useState, useRef } from 'react'; 
+import KakaoMapView from '../components/KakaoMapView'; 
 
 const MainScreen = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation();
+
+  const [startStation, setStartStation] = useState('');
+  const [endStation, setEndStation] = useState('');
+
+  const mapViewRef = useRef(null); 
+
+  const handleSearch = async () => {
+    if (!startStation || !endStation) {
+      Alert.alert('알림', '출발지와 도착지를 모두 입력해주세요.');
+      return;
+    }
+
+    Keyboard.dismiss();
+
+    console.log(`검색 시작: ${startStation}에서 ${endStation}까지`);
+
+    // [여기에 POST API 호출 코드가 들어갈 자리]
+    // const postData = {
+    //   start_station: startStation,
+    //   end_station: endStation,
+    //   line_name: "2호선", // (참고) 호선 정보는 어떻게 받을지 백엔드와 협의 필요
+    //   hour_of_day: new Date().getHours() 
+    // };
+    // try {
+    //   const response = await fetch('https://.../api/v1/predict/train_congestion', {
+    //     method: 'POST',
+    //     headers: { 'Content-Type': 'application/json' },
+    //     body: JSON.stringify(postData)
+    //   });
+    //   const data = await response.json();
+    //   console.log('API 응답:', data);
+
+    //   // [여기에 지도에 마커 그리는 코드가 들어갈 자리]
+    //   // (KakaoMapView.js의 Ref를 이용해 WebView로 데이터를 쏴야 함)
+    //   if (mapViewRef.current) {
+    //     // mapViewRef.current.drawMarkers(data.station_congestion_details);
+    //   }
+
+    // } catch (error) {
+    //   console.error("API 호출 에러:", error);
+    //   Alert.alert("오류", "경로를 검색하는 중 문제가 발생했습니다.");
+    // }
+  };
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        <StatusBar style='dark-content' /> 
-        
-        <View style={styles.searchContainer}>
-          <TextInput
-            style={styles.searchInput}
-            placeholder="출발지와 도착지를 입력하세요"
-            placeholderTextColor="#888"
-          />
-        <TouchableOpacity style={styles.findPathButton} onPress={() => navigation.navigate('Search')}>
-            <Text style={styles.buttonText}>길찾기</Text>
-        </TouchableOpacity>
-        </View>
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.container}>
+          <StatusBar style='dark-content' /> 
 
-        <View style={styles.mapContainer}>
-          <Image
-            source={{ uri: 'https://via.placeholder.com/400x300.png?text=Map+Placeholder' }}
-            style={styles.mapImage}
-          />
+          <View style={styles.searchContainer}>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="출발지 (예: 강남)"
+              placeholderTextColor="#888"
+              value={startStation} 
+              onChangeText={setStartStation} 
+            />
+            <TextInput
+              style={[styles.searchInput, {marginTop: 10}]}
+              placeholder="도착지 (예: 사당)"
+              placeholderTextColor="#888"
+              value={endStation}
+              onChangeText={setEndStation} 
+            />
+            <TouchableOpacity 
+              style={styles.findPathButton} 
+              onPress={handleSearch} 
+            >
+              <Text style={styles.buttonText}>혼잡도 경로 검색</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.mapContainer}>
+            <KakaoMapView ref={mapViewRef} style={styles.mapView} /> 
+          </View>
         </View>
-      </View>
-    </SafeAreaView>
+      </SafeAreaView>
     </TouchableWithoutFeedback>
   );
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  container: {
-    flex: 1,
-    paddingHorizontal: 15, 
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-  },
-  searchInput: {
-    flex: 1,
-    height: 48,
-    backgroundColor: '#f0f2f5', 
-    borderRadius: 12, 
-    paddingHorizontal: 15,
-    fontSize: 16,
-
-  },
-  findPathButton: {
-    marginLeft: 10,
-    height: 48,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#416cec', 
-    borderRadius: 12, 
-    paddingHorizontal: 15,
-
-  },
-  buttonText: {
-    color: '#fff', 
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  mapContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 15, 
-    overflow: 'hidden', 
-    marginVertical: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3, 
-  },
-  mapImage: {
-    width: '100%',
-    height: '100%',
-  },
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  container: {
+    flex: 1,
+    paddingHorizontal: 15, 
+  },
+  searchContainer: {
+    marginTop: 30,
+    paddingVertical: 10,
+  },
+  searchInput: {
+    height: 48,
+    backgroundColor: '#f0f2f5', 
+    borderRadius: 12, 
+    paddingHorizontal: 15,
+    fontSize: 16,
+  },
+  findPathButton: {
+    marginTop: 10, 
+    width: '100%', 
+    height: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#416cec', 
+    borderRadius: 12, 
+    paddingHorizontal: 15,
+  },
+  buttonText: {
+    color: '#fff', 
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  mapContainer: {
+    flex: 1,
+    borderRadius: 15, 
+    overflow: 'hidden', 
+    marginVertical: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3, 
+  },
 });
 
 export default MainScreen;
