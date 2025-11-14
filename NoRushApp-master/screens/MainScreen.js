@@ -1,3 +1,5 @@
+// MainScreen.js (MainScreen 파일명은 가정)
+
 import { useNavigation } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import { Keyboard, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View, Alert } from 'react-native';
@@ -138,6 +140,7 @@ const swapLocations = () => {
           {/*카카오 맵*/}
           <View style={styles.mapContainer}>
             <KakaoMapView ref={mapViewRef} style={styles.mapView} /> 
+
           </View>
         </View>
       </SafeAreaView>
@@ -208,6 +211,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   mapContainer: {
+    // 지도 영역을 확보하기 위한 높이 설정
     flex: 1,
     borderRadius: 15,
     overflow: 'hidden',

@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native'; // Alert 추가
 
 export default function RegisterScreen({ navigation }) {
   const [form, setForm] = useState({
     name: '',
     email: '',
-    phone: '',
+    phoneNumber: '',
     password: ''
   });
 
@@ -13,9 +13,56 @@ export default function RegisterScreen({ navigation }) {
     setForm({ ...form, [key]: value });
   };
 
-  const handleSubmit = () => {
-    console.log('회원가입 시도:', form);
-    navigation.navigate('Login');
+  const handleSubmit = async () => { // ① async 함수
+    const API_URL = 'https://norush2025-i8pt.onrender.com/api/v1/auth/signup';
+
+    if (!form.name || !form.email || !form.password) {
+      Alert.alert('필수 정보 누락', '이름, 이메일, 비밀번호를 모두 입력해주세요.');
+      return;
+    }
+
+    try {
+      console.log('회원가입 시도 데이터:', form);
+      
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: form.name,
+          email: form.email,
+          phoneNumber: form.phoneNumber,
+          password: form.password,
+        }),
+      });
+
+       const responseText = await response.text(); 
+      console.log('HTTP 상태 코드:', response.status);
+      console.log('서버 응답 본문 (TEXT):', responseText); // 이 로그를 통해 HTML 내용을 확인!
+      
+      let data = null;
+      if (response.ok) { 
+        try {
+                data = JSON.parse(responseText);
+            } catch (jsonError) {
+                // JSON 파싱 실패 시 처리
+                console.error('JSON 파싱 오류:', jsonError);
+                Alert.alert('응답 오류', '서버 응답이 JSON 형식이 아닙니다.');
+                return;
+            }
+        console.log('회원가입 성공:', data);
+        Alert.alert('성공', '회원가입에 성공했습니다! 로그인 페이지로 이동합니다.');
+        navigation.navigate('Login'); 
+      } else { 
+        console.error('회원가입 실패 응답:', data);
+        // 서버에서 제공하는 오류 메시지가 있다면 표시
+        Alert.alert('회원가입 실패', data.message || '서버에서 오류가 발생했습니다. 다시 시도해 주세요.');
+      }
+    } catch (error) { 
+      console.error('네트워크 또는 요청 오류:', error);
+      Alert.alert('오류', '네트워크 연결 상태를 확인하거나 서버 관리자에게 문의하세요.');
+    }
   };
 
   return (
@@ -43,7 +90,7 @@ export default function RegisterScreen({ navigation }) {
         placeholder="전화번호"
         placeholderTextColor="#666666"
         value={form.phone}
-        onChangeText={(value) => handleChange('phone', value)}
+        onChangeText={(value) => handleChange('phoneNumber', value)}
       />
 
       <TextInput
