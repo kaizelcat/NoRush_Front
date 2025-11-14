@@ -1,24 +1,34 @@
 import { useNavigation } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
-import { Keyboard, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View, Alert } from 'react-native';
-import React, { useState, useRef } from 'react'; 
-import KakaoMapView from '../components/KakaoMapView'; 
+import {
+  Keyboard,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
+  Alert,
+} from 'react-native';
+import React, { useState, useRef } from 'react';
+import KakaoMapView from '../components/KakaoMapView';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 
 const MainScreen = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation();
 
   const [startStation, setStartStation] = useState('');
   const [endStation, setEndStation] = useState('');
-  
-  const mapViewRef = useRef(null); 
+
+  const mapViewRef = useRef(null);
 
   // 현재 위치 가져오기 (실제 GPS)
   const getMyCoordinates = async () => {
     const { status } = await Location.requestForegroundPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert("위치 권한이 필요합니다.");
+      Alert.alert('위치 권한이 필요합니다.');
       return null;
     }
 
@@ -26,12 +36,11 @@ const MainScreen = () => {
     return location.coords; // { latitude, longitude }
   };
 
-  // setter에 좌표 넣어주는 함수
+  // 입력값 setter에 좌표 넣어주는 함수
   const handleUseMyLocation = async (setter) => {
     const coords = await getMyCoordinates();
     if (!coords) return;
-    console.log("내 좌표(lat, lng):", coords.latitude, coords.longitude);
-    // 입력칸에 좌표 넣기
+    console.log('내 좌표(lat, lng):', coords.latitude, coords.longitude);
     setter(`${coords.latitude.toFixed(5)}, ${coords.longitude.toFixed(5)}`);
   };
 
@@ -45,57 +54,42 @@ const MainScreen = () => {
 
     console.log(`검색 시작: ${startStation}에서 ${endStation}까지`);
 
-    // [여기에 POST API 호출 코드가 들어갈 자리]
-    // const postData = {
-    //   start_station: startStation,
-    //   end_station: endStation,
-    //   line_name: "2호선", // (참고) 호선 정보는 어떻게 받을지 백엔드와 협의 필요
-    //   hour_of_day: new Date().getHours() 
-    // };
-    // try {
-    //   const response = await fetch('https://.../api/v1/predict/train_congestion', {
-    //     method: 'POST',
-    //     headers: { 'Content-Type': 'application/json' },
-    //     body: JSON.stringify(postData)
-    //   });
-    //   const data = await response.json();
-    //   console.log('API 응답:', data);
-
-    //   // [여기에 지도에 마커 그리는 코드가 들어갈 자리]
-    //   // (KakaoMapView.js의 Ref를 이용해 WebView로 데이터를 쏴야 함)
-    //   if (mapViewRef.current) {
-    //     // mapViewRef.current.drawMarkers(data.station_congestion_details);
-    //   }
-
-    // } catch (error) {
-    //   console.error("API 호출 에러:", error);
-    //   Alert.alert("오류", "경로를 검색하는 중 문제가 발생했습니다.");
-    // }
+    // TODO: 여기서 API 호출 후 응답 받아서 RouteResults로 넘기기
+    navigation.navigate('RouteResults', {
+      routeData: {
+        start: startStation,
+        end: endStation,
+        customName: `${startStation} → ${endStation}`,
+        etaMinutes: 27,
+        segments: [],
+        alternatives: [],
+      },
+    });
   };
-const swapLocations = () => {
-        const temp = startStation;
-        setStartStation(endStation);
-        setEndStation(temp);
-    };
+
+  const swapLocations = () => {
+    const temp = startStation;
+    setStartStation(endStation);
+    setEndStation(temp);
+  };
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.container}>
-          <StatusBar style='dark-content' />
+          <StatusBar style="dark-content" />
 
+          {/* === 여기 searchContainer 부분이 네가 만든 UI로 교체된 부분 === */}
           <View style={styles.searchContainer}>
-            {/*출발지 입력*/}
-            <View style={styles.locationRow}>
-              
-            <TextInput
+            {/* 출발지 입력 */}
+            <View className="locationRow" style={styles.locationRow}>
+              <TextInput
                 style={styles.searchInput}
                 placeholder="출발지 (예: 강남)"
                 placeholderTextColor="#888"
-                value={startStation} 
-                onChangeText={setStartStation} 
+                value={startStation}
+                onChangeText={setStartStation}
               />
-              {/*현재 위치 버튼*/}
               <TouchableOpacity
                 style={styles.locationIconWrapper}
                 onPress={() => handleUseMyLocation(setStartStation)}
@@ -104,21 +98,21 @@ const swapLocations = () => {
               </TouchableOpacity>
             </View>
 
-            {/*Swap*/}
+            {/* Swap 버튼 */}
             <View style={styles.centered}>
               <TouchableOpacity style={styles.swapBtn} onPress={swapLocations}>
                 <MaterialIcons name="swap-vert" size={24} color="#4b5563" />
               </TouchableOpacity>
             </View>
-            
-            {/*도착지 입력*/}
-            <View style={[styles.locationRow, {marginTop: 10}]}>
+
+            {/* 도착지 입력 */}
+            <View style={[styles.locationRow, { marginTop: 10 }]}>
               <TextInput
                 style={styles.searchInput}
                 placeholder="도착지 (예: 사당)"
                 placeholderTextColor="#888"
                 value={endStation}
-                onChangeText={setEndStation} 
+                onChangeText={setEndStation}
               />
               <TouchableOpacity
                 style={styles.locationIconWrapper}
@@ -127,17 +121,16 @@ const swapLocations = () => {
                 <MaterialIcons name="my-location" size={20} color="#777" />
               </TouchableOpacity>
             </View>
-            {/*검색 버튼*/}
-            <TouchableOpacity 
-              style={styles.findPathButton} 
-              onPress={handleSearch} 
-            >
-              <Text style={styles.buttonText}>혼잡도 경로 검색</Text>
+
+            {/* 검색 버튼 */}
+            <TouchableOpacity style={styles.findPathButton} onPress={handleSearch}>
+              <Text style={styles.buttonText}>검색</Text>
             </TouchableOpacity>
           </View>
-          {/*카카오 맵*/}
+
+          {/* === 여기부터는 연동 후 코드의 지도 영역 그대로 유지 === */}
           <View style={styles.mapContainer}>
-            <KakaoMapView ref={mapViewRef} style={styles.mapView} /> 
+            <KakaoMapView ref={mapViewRef} style={styles.mapView} />
           </View>
         </View>
       </SafeAreaView>
@@ -159,7 +152,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
 
-  // 한 줄 전체 박스 (출발지/도착지 공통)
+  // 출발지 / 도착지 한 줄 박스
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -217,6 +210,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+  },
+  mapView: {
+    flex: 1,
   },
 });
 
