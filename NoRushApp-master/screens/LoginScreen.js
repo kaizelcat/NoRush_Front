@@ -1,37 +1,73 @@
-import { useState } from 'react';
-import { Linking, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
+import * as Linking from 'expo-linking';
 
-const SERVER_HOST = 'http://localhost:8080'; // 로컬용
-// const SERVER_HOST = 'https://norush2025-i8pt.onrender.com'; // 도메인
+// Spring Security 서버 주소 (배포 환경)
+const SERVER_HOST = 'https://norush2025-i8pt.onrender.com';
+// const SERVER_HOST = 'http://localhost:8080'; // 로컬 테스트용
+const REDIRECT_SCHEME = 'norushapp://login-success';
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  const handleSocialLogin = (provider) => {
-        let url;
-        
-        switch (provider) {
-            case '네이버':
-                url = `${SERVER_HOST}/oauth2/authorization/naver`;
-                break;
-            case '카카오':
-                url = `${SERVER_HOST}/oauth2/authorization/kakao`;
-                break;
-            case '구글':
-                url = `${SERVER_HOST}/oauth2/authorization/google`;
-                break;
-            case '애플':
-                console.log("애플 로그인은 현재 미지원");
-                return; 
-            default:
-                return;
-        }
+  useEffect(() => {
+    const handleDeepLink = (event) => {
+      const url = event.url;
+      if (url && url.startsWith(REDIRECT_SCHEME)) {
 
-        Linking.openURL(url).catch(err => console.error('소셜 로그인 링크 열기 실패:', err));
-        
-        console.log(`[${provider}] 로그인 시도 URL: ${url}`);
+        const urlParams = new URLSearchParams(url.split('?')[1] || '');
+        const token = urlParams.get('token');
+        const userId = urlParams.get('userId');
+
+        if (token && userId) {
+          console.log("로그인 성공! 토큰:", token);
+          
+          // 메인 화면으로 이동 -> 삭제??
+          navigation.replace('Main');
+        }
+      }
     };
+
+    const subscription = Linking.addEventListener('url', handleDeepLink);
+
+    return () => subscription.remove();
+  }, [navigation]);
+
+
+  const handleLogin = () => {
+    console.log('로그인 시도:', email, password);
+    navigation.replace('Main');
+  };
+
+  const handleSocialLogin = async (provider) => {
+    let authUrl;
+    
+    switch (provider) {
+        case '네이버':
+            authUrl = `${SERVER_HOST}/oauth2/authorization/naver`;
+            break;
+        case '카카오':
+            authUrl = `${SERVER_HOST}/oauth2/authorization/kakao`;
+            break;
+        case '구글':
+            authUrl = `${SERVER_HOST}/oauth2/authorization/google`;
+            break;
+        case '애플':
+            console.log("애플 로그인은 현재 미지원");
+            return; 
+        default:
+            return;
+    }
+
+    try {
+        const result = await WebBrowser.openAuthSessionAsync(authUrl, REDIRECT_SCHEME);
+            
+    } catch (error) {
+        console.error('소셜 로그인 실패:', error);
+    }
+  };
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
