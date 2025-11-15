@@ -1,10 +1,11 @@
 import { useNavigation } from '@react-navigation/native';
-import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator } from 'react-native';
+import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator, Alert } from 'react-native';
 import React, { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage'; // 1. AsyncStorage 임포트
 
 // 기본 이미지 URL 
 const DEFAULT_PROFILE_IMAGE = 'https://via.placeholder.com/100';
+const LOGOUT_API_URL = 'http://172.24.16.1:8080/api/v1/auth/logout';
 
 const MyPage = () => {
     const navigation = useNavigation();
@@ -40,6 +41,53 @@ const MyPage = () => {
         // 컴포넌트가 마운트될 때마다 정보를 불러오기
         loadUserInfo(); 
     }, [navigation]);
+
+    const handleLogout = async () => {
+        console.log('Mypage 로그아웃 버튼')
+        // 1) 진짜로 로그아웃할지 확인
+        // 필요 없으면 이 Alert 부분은 빼도 됨
+        // import { Alert } from 'react-native'; 필요
+        Alert.alert(
+            '로그아웃',
+            '정말 로그아웃하시겠습니까?',
+            [
+                { text: '취소', style: 'cancel' },
+                {
+                    text: '로그아웃',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            // 2) 저장된 accessToken 꺼내오기
+                            const accessToken = await AsyncStorage.getItem('accessToken');
+
+                            // 3) 백엔드에 로그아웃 요청
+                            await fetch(LOGOUT_API_URL, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    Authorization: accessToken ? `Bearer ${accessToken}` : '',
+                                },
+                            });
+                        } catch (e) {
+                            console.error('로그아웃 요청 중 오류:', e);
+                        } finally {
+                            // 4) 로컬에 저장된 토큰/유저 정보 삭제
+                            await AsyncStorage.removeItem('accessToken');
+                            await AsyncStorage.removeItem('refreshToken');
+                            await AsyncStorage.removeItem('USER_INFO');
+
+                            // 5) 네비게이션 스택 초기화 후 로그인 화면으로 이동
+                            navigation.reset({
+                                index: 0,
+                                routes: [{ name: 'Login' }], // 네가 사용 중인 로그인 스크린 이름
+                            });
+                        }
+                    },
+                },
+            ],
+        );
+    };
+
 
 
     const renderMenuItem = (title, onPress, isLast = false) => (
@@ -89,7 +137,7 @@ const MyPage = () => {
                     {renderMenuItem('즐겨찾는 경로', () => navigation.navigate('Favorites'))}
                     {renderMenuItem('공지사항', () => navigation.navigate('Announcements'))}
                     {renderMenuItem('고객센터', () => navigation.navigate('Support'))}
-                    {renderMenuItem('로그아웃', () => { /* 로그아웃 로직 구현 */ }, true)}
+                    {renderMenuItem('로그아웃', handleLogout, true)}
                 </View>
             </ScrollView>
         </SafeAreaView>
