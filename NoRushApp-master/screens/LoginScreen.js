@@ -1,18 +1,37 @@
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Linking, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+
+const SERVER_HOST = 'http://localhost:8080'; // 로컬용
+// const SERVER_HOST = 'https://norush2025-i8pt.onrender.com'; // 도메인
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  const handleLogin = () => {
-    console.log('로그인 시도:', email, password);
-    navigation.replace('Main') // 로그인 → 즐겨찾기 이동
-  };
-
   const handleSocialLogin = (provider) => {
-    console.log(`${provider} 로그인 시도`);
-  };
+        let url;
+        
+        switch (provider) {
+            case '네이버':
+                url = `${SERVER_HOST}/oauth2/authorization/naver`;
+                break;
+            case '카카오':
+                url = `${SERVER_HOST}/oauth2/authorization/kakao`;
+                break;
+            case '구글':
+                url = `${SERVER_HOST}/oauth2/authorization/google`;
+                break;
+            case '애플':
+                console.log("애플 로그인은 현재 미지원");
+                return; 
+            default:
+                return;
+        }
+
+        Linking.openURL(url).catch(err => console.error('소셜 로그인 링크 열기 실패:', err));
+        
+        console.log(`[${provider}] 로그인 시도 URL: ${url}`);
+    };
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
