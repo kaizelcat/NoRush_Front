@@ -49,7 +49,7 @@ const MyPage = () => {
         </TouchableOpacity>
     );
 
-    // 3. 로딩 중일 때 로딩 인디케이터를 표시합니다 (로딩중).
+    // 로딩 중일 때 로딩 인디케이터를 표시 (로딩중)
     if (isLoading) {
         return (
             <SafeAreaView style={styles.safeArea}>
@@ -61,10 +61,10 @@ const MyPage = () => {
         );
     }
     
-    // 로딩이 완료되면 user 객체가 존재
+    // 로딩이 완료되면 user 객체가 존재 -> 마이페이지에 띄우기
     const profileImageUrl = user?.profileImage ? { uri: user.profileImage } : { uri: DEFAULT_PROFILE_IMAGE };
-    const displayName = user?.name ? `${user.name}님` : '사용자님';
-    const displayEmail = user?.email || '이메일 정보 없음';
+    const displayName = user?.userInfo?.name ? `${user.userInfo.name}님` : '사용자님';
+    const displayEmail = user?.userInfo?.email || '이메일 정보 없음';
 
     return (
         <SafeAreaView style={styles.safeArea}>
@@ -76,7 +76,7 @@ const MyPage = () => {
                 <View style={styles.profileSection}>
                     <Image
                         style={styles.profileImage}
-                        source={profileImageUrl} // ⬅️ 저장된 프로필 이미지 사용
+                        source={profileImageUrl} // 저장된 프로필 이미지 사용
                     />
                     {/* 저장된 사용자 이름 사용 */}
                     <Text style={styles.profileName}>{displayName}</Text> 

@@ -1,6 +1,7 @@
 // 회원가입 페이지
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native'; // Alert 추가
+import { BASE_URL } from '../setting';
 
 export default function RegisterScreen({ navigation }) {
   const [form, setForm] = useState({
@@ -14,8 +15,8 @@ export default function RegisterScreen({ navigation }) {
     setForm({ ...form, [key]: value });
   };
 
-  const handleSubmit = async () => { // ① async 함수
-    const API_URL = 'http://54.180.137.9:8080/api/v1/auth/signup';
+  const handleSubmit = async () => { // async 함수
+    const API_URL = `http://${BASE_URL}/api/v1/auth/signup`;
 
     if (!form.name || !form.email || !form.password) {
       Alert.alert('필수 정보 누락', '이름, 이메일, 비밀번호를 모두 입력해주세요.');
@@ -40,7 +41,7 @@ export default function RegisterScreen({ navigation }) {
 
        const responseText = await response.text(); 
       console.log('HTTP 상태 코드:', response.status);
-      console.log('서버 응답 본문 (TEXT):', responseText); // 이 로그를 통해 HTML 내용을 확인!
+      console.log('서버 응답 본문 (TEXT):', responseText); 
       
       let data = null;
       if (response.ok) { 
