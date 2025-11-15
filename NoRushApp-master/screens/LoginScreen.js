@@ -8,7 +8,7 @@ export default function LoginScreen({ navigation }) {
 
   const handleLogin = async (response) => {
     console.log('로그인 시도:', email, password);
-const LOGIN_API_URL = 'https://norush2025-i8pt.onrender.com/api/v1/auth/signin'; 
+const LOGIN_API_URL = 'http://54.180.137.9:8080/api/v1/auth/signin'; 
 
     try {
         const response = await fetch(LOGIN_API_URL, {

@@ -41,3 +41,5 @@ app-example
 .vscdoe/
 
 setting.js
+
+node_modules/.bin/react-native text eol=lf

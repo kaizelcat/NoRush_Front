@@ -1,3 +1,4 @@
+// 회원가입 페이지
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native'; // Alert 추가
 
@@ -14,7 +15,7 @@ export default function RegisterScreen({ navigation }) {
   };
 
   const handleSubmit = async () => { // ① async 함수
-    const API_URL = 'https://norush2025-i8pt.onrender.com/api/v1/auth/signup';
+    const API_URL = 'http://54.180.137.9:8080/api/v1/auth/signup';
 
     if (!form.name || !form.email || !form.password) {
       Alert.alert('필수 정보 누락', '이름, 이메일, 비밀번호를 모두 입력해주세요.');
