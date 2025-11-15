@@ -6,14 +6,10 @@ export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  const handleLogin = async (response) => {
+  const handleLogin = async () => {
     console.log('로그인 시도:', email, password);
-<<<<<<< HEAD
 
   const LOGIN_API_URL = 'http://10.0.2.2:8080/api/v1/auth/signin'; 
-=======
-  const LOGIN_API_URL = 'http://172.24.16.1:8080/api/v1/auth/signin'; 
->>>>>>> origin/feature/logout
 
       try {
           const response = await fetch(LOGIN_API_URL, {
@@ -29,7 +25,6 @@ export default function LoginScreen({ navigation }) {
               }),
           });
 
-<<<<<<< HEAD
         // 3. 서버 응답 처리
         if (response.ok) {
             // HTTP 상태 코드가 200번대인 경우 (성공)
@@ -60,32 +55,6 @@ export default function LoginScreen({ navigation }) {
                 alert('로그인 처리 중 사용자 정보를 찾을 수 없습니다.');
                 console.error('응답 구조 오류: userInfo 필드가 없습니다.', data);
             }
-=======
-          // 3. 서버 응답 처리
-          if (response.ok) {
-              // HTTP 상태 코드가 200번대인 경우 (성공)
-              
-              // 1. 응답 본문을 파싱하여 'data' 변수에 저장합니다.
-              const data = await response.json(); 
-              
-              console.log('로그인 성공 응답 전체:', data);
-              
-              // 2.  수정: 'response.data.userInfo' 대신 'data.data.userInfo' 사용
-              const userInfo = data.data.userInfo; 
-              
-              // 3. 안전하게 userInfo가 존재하는지 확인 후 저장 로직 실행
-              if (userInfo) {
-                  await AsyncStorage.setItem('USER_INFO', JSON.stringify(userInfo));
-                  console.log('사용자 정보 저장 완료');
-                  
-                  // 성공 시 메인 화면으로 이동
-                  navigation.replace('Main');
-              } else {
-                  // userInfo가 응답에 없는 경우 처리 (예: 데이터 구조 오류)
-                  alert('로그인 처리 중 사용자 정보를 찾을 수 없습니다.');
-                  console.error('응답 구조 오류: userInfo 필드가 없습니다.', data);
-              }
->>>>>>> origin/feature/logout
 
           } else {
               // HTTP 상태 코드가 4xx, 5xx 등 실패인 경우
