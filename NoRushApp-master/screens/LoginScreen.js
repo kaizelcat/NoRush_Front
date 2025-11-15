@@ -8,7 +8,8 @@ export default function LoginScreen({ navigation }) {
 
   const handleLogin = async (response) => {
     console.log('로그인 시도:', email, password);
-const LOGIN_API_URL = 'http://54.180.137.9:8080/api/v1/auth/signin'; 
+
+  const LOGIN_API_URL = 'http://10.0.2.2:8080/api/v1/auth/signin'; 
 
     try {
         const response = await fetch(LOGIN_API_URL, {
@@ -30,7 +31,13 @@ const LOGIN_API_URL = 'http://54.180.137.9:8080/api/v1/auth/signin';
             
             // 1. 응답 본문을 파싱하여 'data' 변수에 저장합니다.
             const data = await response.json(); 
+            const accessToken = data.data.accessToken;
+            const refreshToken = data.data.refreshToken;
             
+            // 토큰 저장
+            await AsyncStorage.setItem('ACCESS_TOKEN', accessToken);
+            await AsyncStorage.setItem('REFRESH_TOKEN', refreshToken);
+
             console.log('로그인 성공 응답 전체:', data);
             
             // 2.  수정: 'response.data.userInfo' 대신 'data.data.userInfo' 사용
