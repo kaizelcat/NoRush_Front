@@ -13,9 +13,10 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { BASE_URL } from '../setting';
 import { MaterialIcons, Ionicons, FontAwesome5 } from '@expo/vector-icons';
 
-const API_URL = "-";
+const API_URL = `http://${BASE_URL}:8080/api/v1/route/predict/station`;
 
 // 혼잡도 예측값 (0~100)을 레벨로 변환
 const getCongestionLevel = (value) => {

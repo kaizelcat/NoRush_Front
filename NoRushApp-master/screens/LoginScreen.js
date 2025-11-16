@@ -11,7 +11,7 @@ export default function LoginScreen({ navigation }) {
   const handleLogin = async () => {
     console.log('로그인 시도:', email, password);
 
-  const LOGIN_API_URL = 'http://10.0.2.2:8080/api/v1/auth/signin'; 
+  const LOGIN_API_URL = `http://${BASE_URL}:8080/api/v1/auth/signin`; 
 
       try {
           const response = await fetch(LOGIN_API_URL, {

@@ -20,7 +20,7 @@ export default function RegisterScreen({ navigation }) {
   };
 
   const handleSubmit = async () => { // ① async 함수
-    const API_URL = 'http://10.0.2.2:8080/api/v1/auth/signup';
+    const API_URL = `http://${BASE_URL}:8080/api/v1/auth/signup`;
 
     // 요청할때마다 이전 에러 초기화
     setFieldErrors({});

@@ -16,7 +16,7 @@ import { useFavorites } from '../contexts/FavoritesContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BASE_URL } from '../setting';
 
-const API_URL = `http://10.0.2.2:8080/api/v1/route/predict/station`;
+const API_URL = `http://${BASE_URL}:8080/api/v1/route/predict/station`;
 
 // 현재 시간(시/분/초)을 포함하여 동적으로 설정
 const getCurrentDatetime = () => {
