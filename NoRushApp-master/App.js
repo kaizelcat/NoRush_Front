@@ -14,6 +14,8 @@ import MainTabs from './navigation/MainTabs';
 
 // 회원수정
 import EditProfile from './screens/EditProfile';
+import AnnouncementsScreen from './screens/AnnouncementsScreen';
+
 
 const Stack = createNativeStackNavigator();
 
@@ -46,6 +48,10 @@ export default function App() {
             name="EditProfile"
             component={EditProfile}
             options={{ title: '회원정보 수정' }}
+          />
+          <Stack.Screen 
+            name="Announcements"
+            component={AnnouncementsScreen}
           />
 
         </Stack.Navigator>

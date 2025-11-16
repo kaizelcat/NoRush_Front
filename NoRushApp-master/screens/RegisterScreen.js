@@ -19,79 +19,84 @@ export default function RegisterScreen({ navigation }) {
     setForm({ ...form, [key]: value });
   };
 
-  const handleSubmit = async () => {
-  const API_URL = `http://${BASE_URL}/api/v1/auth/signup`;
+  const handleSubmit = async () => { // ① async 함수
+    const API_URL = `http://${BASE_URL}:8080/api/v1/auth/signup`;
 
-  setFieldErrors({});
+    // 요청할때마다 이전 에러 초기화
+    setFieldErrors({});
 
-  if (!form.name || !form.email || !form.password) {
-    Alert.alert('필수 정보 누락', '이름, 이메일, 비밀번호를 모두 입력해주세요.');
-    return;
-  }
+    if (!form.name || !form.email || !form.password) {
+      Alert.alert('필수 정보 누락', '이름, 이메일, 비밀번호를 모두 입력해주세요.');
+      return;
+    }
 
-  try {
-    console.log('[SIGNUP] 요청 보냄:', form);
-    console.log('[SIGNUP] 요청 URL:', API_URL);
-
-    const response = await fetch(API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        name: form.name,
-        email: form.email,
-        phoneNumber: form.phoneNumber,
-        password: form.password,
-      }),
-    });
-
-    const responseText = await response.text();
-    console.log('[SIGNUP] 상태 코드:', response.status);
-    console.log('[SIGNUP] 응답 텍스트:', responseText);
-
-    let data = null;
     try {
-      data = JSON.parse(responseText);
-    } catch (jsonError) {
-      console.error('[SIGNUP] JSON 파싱 오류:', jsonError);
-    }
-
-    if (response.ok) {
-      console.log('[SIGNUP] 회원가입 성공:', data);
-      Alert.alert('성공', '회원가입에 성공했습니다! 로그인 페이지로 이동합니다.');
-      navigation.navigate('Login');   // ✅ 여기까지 오면 무조건 넘어가야 함
-      return;
-    }
-
-    // ✅ 여기로 왔다는 건 응답은 왔는데 실패(4xx, 5xx)라는 뜻
-    console.log('[SIGNUP] 회원가입 실패:', data);
-
-    if (data && Array.isArray(data.errors)) {
-      const mappedErrors = {};
-      data.errors.forEach((err) => {
-        const field = err.field;
-        const reason = err.reason;
-
-        if (mappedErrors[field]) {
-          mappedErrors[field] += `\n${reason}`;
-        } else {
-          mappedErrors[field] = reason;
-        }
+      console.log('회원가입 시도 데이터:', form);
+      
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: form.name,
+          email: form.email,
+          phoneNumber: form.phoneNumber,
+          password: form.password,
+        }),
       });
-      setFieldErrors(mappedErrors);
-      return;
-    }
 
-    const msg =
-      (data && (data.resultMsg || data.message)) ||
-      '서버에서 오류가 발생했습니다. 다시 시도해 주세요.';
-    Alert.alert('회원가입 실패', msg);
-  } catch (error) {
-    console.error('[SIGNUP] 네트워크 또는 요청 오류:', error);
-    Alert.alert('오류', '네트워크 연결 상태를 확인하거나 서버 관리자에게 문의하세요.');
-  }
-};
+       const responseText = await response.text(); 
+      console.log('HTTP 상태 코드:', response.status);
+      console.log('서버 응답 본문 (TEXT):', responseText); 
+      
+       // 성공/실패 상관없이 먼저 JSON 파싱
+      let data = null;
+      try {
+        data = JSON.parse(responseText);
+      } catch (jsonError) {
+        console.error('JSON 파싱 오류:', jsonError);
+        // 파싱이 안 되면 data는 그냥 null로 둠
+      }
+
+      if (response.ok) { 
+        console.log('회원가입 성공:', data);
+        Alert.alert('성공', '회원가입에 성공했습니다! 로그인 페이지로 이동합니다.');
+        navigation.navigate('Login'); 
+      } else { 
+        console.log("회원가입 실패 (응답만 출력함)");
+        // 서버에서 제공하는 오류 메시지가 있다면 표시
+       
+        if(data&&Array.isArray(data.errors)) {
+          const mappedErrors = {};
+
+          data.errors.forEach((err) => {
+            const field = err.field;   // "email", "phoneNumber", "name", "password"
+            const reason = err.reason; // "이메일을 입력해주세요." 등
+
+            if (mappedErrors[field]) {
+              mappedErrors[field] += `\n${reason}`; // 같은 필드 여러 에러면 줄바꿈으로 이어붙이기
+            } else {
+              mappedErrors[field] = reason;
+            }
+          });
+
+          // 인풋밑에 표시 
+          setFieldErrors(mappedErrors);
+          return;
+        }
+
+        //errors 배열이 없을때
+        const msg =
+          (data && (data.resultMsg || data.message)) ||
+          '서버에서 오류가 발생했습니다. 다시 시도해 주세요.';
+        Alert.alert('회원가입 실패', msg);
+      }
+    } catch (error) { 
+      console.error('네트워크 또는 요청 오류:', error);
+      Alert.alert('오류', '네트워크 연결 상태를 확인하거나 서버 관리자에게 문의하세요.');
+    }
+  };
 
   return (
     <ScrollView contentContainerStyle={styles.container}>

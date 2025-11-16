@@ -1,5 +1,5 @@
-// MainScreen.js (MainScreen 파일명은 가정)
-
+// MainScreen.js (충돌 해결 완료)
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import {
@@ -13,55 +13,57 @@ import {
   Alert,
   ActivityIndicator, 
 } from 'react-native';
-// ⭐️ react-native 기본 SafeAreaView 제거
-import React, { useState, useEffect } from 'react'; // useRef 제거
-// ⭐️ 새 SafeAreaView import 추가
 import { SafeAreaView } from 'react-native-safe-area-context'; 
-
+import React, { useState, useEffect } from 'react';
 import KakaoMapView from '../components/KakaoMapView';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 
+// ⭐️ 서버 IP 주소와 포트 적용
+const SERVER_URL = 'http://54.180.137.9:8080'; 
+const API_ENDPOINT = '/api/v1/route/predict/station'; 
+
+const getAccessToken = async () => {
+    try {
+        const token = await AsyncStorage.getItem('ACCESS_TOKEN');
+        return token;
+    } catch (e) {
+        console.error('Failed to retrieve token', e);
+        return null;
+    }
+};
+
 const MainScreen = () => {
   const navigation = useNavigation();
-
-  // ⭐️ 1. 지도 초기 위치 상태 (위도, 경도)
   const [userLocation, setUserLocation] = useState(null); 
-  
   const [startStation, setStartStation] = useState('');
   const [endStation, setEndStation] = useState('');
-
-  // const mapViewRef = useRef(null); // ⭐️ Ref는 KakaoMapView 내부에서만 사용하도록 제거
 
   // 현재 위치 가져오기 (실제 GPS)
   const getMyCoordinates = async () => {
     const { status } = await Location.requestForegroundPermissionsAsync();
     if (status !== 'granted') {
-      // ⭐️ 위치 권한이 거부된 경우, 지도를 서울 중심으로 띄우기 위해 null 반환
       return null; 
     }
-
     const location = await Location.getCurrentPositionAsync({});
-    return location.coords; // { latitude, longitude }
+    return location.coords;
   };
 
-  // ⭐️ 2. 컴포넌트 로드 시, 지도의 초기 위치를 가져오는 로직
+  // 컴포넌트 로드 시, 지도의 초기 위치를 가져오는 로직
   useEffect(() => {
     (async () => {
       const coords = await getMyCoordinates();
       if (coords) {
-        // ⭐️ GPS 위치 가져오기 성공 로그 추가 (디버깅용)
         console.log('✅ GPS 위치 가져오기 성공:', coords.latitude, coords.longitude); 
-        setUserLocation(coords); // { latitude, longitude } 형식 그대로 저장
+        setUserLocation(coords); 
       } else {
         console.log('❌ GPS 위치 가져오기 실패, 기본 위치 사용');
-        // 권한 거부 등으로 위치를 못 가져오면, 임의의 기본값(서울 등) 설정
         setUserLocation({ latitude: 37.566826, longitude: 126.9786567 });
       }
     })();
   }, []);
 
-  // 입력값 setter에 좌표 넣어주는 함수 (기존 코드 그대로 유지)
+  // '내 위치' 버튼 클릭 시 호출
   const handleUseMyLocation = async (setter) => {
     const coords = await getMyCoordinates();
     if (!coords) {
@@ -70,51 +72,87 @@ const MainScreen = () => {
     }
     
     console.log('내 좌표(lat, lng):', coords.latitude, coords.longitude);
-    // ⭐️ 지도에 마커 표시 요청을 트리거하기 위해 userLocation 상태도 업데이트
     setUserLocation(coords); 
-    setter(`${coords.latitude.toFixed(5)}, ${coords.longitude.toFixed(5)}`);
+    // 서버는 장소 이름을 요구하므로, 임시로 좌표를 넣지만, 사용자에게 변경 안내
+    setter(`${coords.latitude.toFixed(5)}, ${coords.longitude.toFixed(5)}`); 
+    Alert.alert('안내', '경로 검색을 위해 입력창의 좌표를 장소 이름(예: 서울역)으로 변경해주세요.');
   };
-const handleSearch = async () => {
-  if (!startStation || !endStation) {
-    Alert.alert('알림', '출발지와 도착지를 모두 입력해주세요.');
-    return;
-  }
 
-  Keyboard.dismiss();
+  // [충돌 해결 완료] API 연동 로직 채택
+  const handleSearch = async () => {
+    if (!startStation || !endStation) {
+      Alert.alert('알림', '출발지와 도착지를 모두 입력해주세요.');
+      return;
+    }
 
-  console.log(`검색 시작: ${startStation}에서 ${endStation}까지`);
+    // 1. 팀원 코드를 반영하여 키보드 닫기
+    Keyboard.dismiss(); 
 
-  // 여기서 API 호출은 하지 않고, 입력값을 RouteResults로 넘김
-  navigation.navigate('RouteResults', {
-    from: startStation,       // 출발역
-    to: endStation,           // 도착역
-    datetime: getCurrentDatetime(), 
-  });
-};
+    // 2. 좌표 입력 방지 유효성 검사 (사용자 코드 채택)
+    if (startStation.includes(',') || endStation.includes(',')) {
+        Alert.alert('입력 오류', '출발지와 도착지는 "서울역"과 같은 장소 이름으로 입력해야 합니다.');
+        return;
+    }
 
-const getCurrentDatetime = () => {
-    const date = new Date();
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    
-    // 현재 시, 분, 초를 가져와 포맷에 맞게 추가
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    const seconds = String(date.getSeconds()).padStart(2, '0');
-    
-    // YYYY-MM-DDTHH:MM:SS 형식으로 반환
-    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
-};
+    // 3. 서버가 요구하는 datetime 형식 생성 (사용자 코드 채택)
+    const now = new Date();
+    const datetime = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}T${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:00`;
 
+    try {
+        console.log(`📡 경로 검색 요청: ${startStation} -> ${endStation} at ${datetime}`);
 
+        // 4. 인증 토큰 가져오기
+        const token = await getAccessToken();
+        if (!token) {
+            Alert.alert('인증 오류', '로그인이 필요합니다. 로그인 화면으로 이동합니다.');
+            navigation.navigate('Login');
+            return;
+        }
+
+        // 5. API 호출
+        const response = await fetch(`${SERVER_URL}${API_ENDPOINT}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+                from: startStation,
+                to: endStation,     
+                datetime: datetime, 
+            }),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`서버 응답 오류: ${response.status} - ${errorText}`);
+        }
+
+        const responseData = await response.json();
+        
+        if (responseData && responseData.result) {
+            console.log('✅ API 응답 성공, RouteResults로 이동');
+            
+            navigation.navigate('RouteResults', {
+                routeData: responseData.result,
+                customName: `${startStation} → ${endStation}`, 
+            });
+        } else {
+             throw new Error("경로 데이터가 응답 결과(result 필드)에 포함되지 않았습니다.");
+        }
+
+    } catch (error) {
+        console.error("경로 검색 중 오류 발생:", error);
+        Alert.alert('검색 실패', `경로 추천 서버 통신 오류: ${error.message}`);
+    }
+  };
+  
   const swapLocations = () => {
     const temp = startStation;
     setStartStation(endStation);
     setEndStation(temp);
   };
 
-  // ⭐️ 3. userLocation이 로드되기 전까지 로딩 화면 표시
   if (!userLocation) {
     return (
       <View style={styles.loadingContainer}>
@@ -124,70 +162,68 @@ const getCurrentDatetime = () => {
     );
   }
 
-  // ⭐️ 4. userLocation이 로드된 후 메인 UI 렌더링
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-      {/* ⭐️ react-native-safe-area-context의 SafeAreaView 사용 */}
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
         <View style={styles.container}>
           <StatusBar style="dark-content" />
 
-          {/* === Search Container (기존 UI 유지) === */}
-          <View style={styles.searchContainer}>
-            {/* 출발지 입력 */}
-            <View className="locationRow" style={styles.locationRow}>
-              <TextInput
-                style={styles.searchInput}
-                placeholder="출발지 (예: 강남역)"
-                placeholderTextColor="#888"
-                value={startStation}
-                onChangeText={setStartStation}
-              />
-              <TouchableOpacity
-                style={styles.locationIconWrapper}
-                onPress={() => handleUseMyLocation(setStartStation)}
-              >
-                <MaterialIcons name="my-location" size={20} color="#777" />
-              </TouchableOpacity>
-            </View>
-
-            {/* Swap 버튼 */}
-            <View style={styles.centered}>
-              <TouchableOpacity style={styles.swapBtn} onPress={swapLocations}>
-                <MaterialIcons name="swap-vert" size={24} color="#4b5563" />
-              </TouchableOpacity>
-            </View>
-
-            {/* 도착지 입력 */}
-            <View style={[styles.locationRow, { marginTop: 10 }]}>
-              <TextInput
-                style={styles.searchInput}
-                placeholder="도착지 (예: 사당역)"
-                placeholderTextColor="#888"
-                value={endStation}
-                onChangeText={setEndStation}
-              />
-              <TouchableOpacity
-                style={styles.locationIconWrapper}
-                onPress={() => handleUseMyLocation(setEndStation)}
-              >
-                <MaterialIcons name="my-location" size={20} color="#777" />
-              </TouchableOpacity>
-            </View>
-
-            {/* 검색 버튼 */}
-            <TouchableOpacity style={styles.findPathButton} onPress={handleSearch}>
-              <Text style={styles.buttonText}>검색</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* === Map Container (KakaoMapView에 userLocation 전달) === */}
+          {/* === Map Container === */}
           <View style={styles.mapContainer}>
             <KakaoMapView 
-                // ref={mapViewRef} // ⭐️ KakaoMapView 내부에서 처리하므로 제거
                 style={styles.mapView} 
-                initialLocation={userLocation} // ⭐️ 여기로 위치 정보를 전달!
+                initialLocation={userLocation}
             />
+          </View>
+
+          {/* === Search Box (Overlay) === */}
+          <View style={styles.searchBox}>
+            {/* 왼쪽: 위치 변경 버튼 */}
+            <TouchableOpacity style={styles.swapBtnLeft} onPress={swapLocations}>
+              <MaterialIcons name="swap-vert" size={24} color="#4b5563" />
+            </TouchableOpacity>
+
+            {/* 중앙: 출발지와 도착지 입력 */}
+            <View style={styles.inputsColumn}>
+              {/* 출발지 입력 */}
+              <View style={styles.locationRow}>
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="출발지"
+                  placeholderTextColor="#888"
+                  value={startStation}
+                  onChangeText={setStartStation}
+                />
+                <TouchableOpacity
+                  style={styles.locationIconWrapper}
+                  onPress={() => handleUseMyLocation(setStartStation)}
+                >
+                  <MaterialIcons name="my-location" size={20} color="#777" />
+                </TouchableOpacity>
+              </View>
+
+              {/* 도착지 입력 */}
+              <View style={[styles.locationRow, { marginTop: 6 }]}>
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="도착지"
+                  placeholderTextColor="#888"
+                  value={endStation}
+                  onChangeText={setEndStation}
+                />
+                <TouchableOpacity
+                  style={styles.locationIconWrapper}
+                  onPress={() => handleUseMyLocation(setEndStation)}
+                >
+                  <MaterialIcons name="my-location" size={20} color="#777" />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* 오른쪽: 길 찾기 버튼 */}
+            <TouchableOpacity style={styles.findPathButton} onPress={handleSearch}>
+              <Text style={styles.buttonText}>길 찾기</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </SafeAreaView>
@@ -198,11 +234,10 @@ const getCurrentDatetime = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: 'transparent',
   },
   container: {
     flex: 1,
-    paddingHorizontal: 15,
   },
   loadingContainer: {
     flex: 1,
@@ -215,73 +250,70 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#4b5563',
   },
-  searchContainer: {
-    marginTop: 30,
-    paddingVertical: 10,
+  mapContainer: {
+    flex: 1,
   },
-
-  // 출발지 / 도착지 한 줄 박스
+  mapView: {
+    flex: 1,
+  },
+  searchBox: {
+    position: 'absolute',
+    top: 15,
+    left: 15,
+    right: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  swapBtnLeft: {
+    width: 36,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  inputsColumn: {
+    flex: 1,
+    marginRight: 8,
+  },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#f0f2f5',
-    borderRadius: 12,
-    height: 48,
+    borderRadius: 10,
+    height: 40,
     paddingHorizontal: 10,
   },
   searchInput: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 15,
     color: '#111',
   },
   locationIconWrapper: {
-    width: 26,
+    width: 24,
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 6,
   },
-
-  centered: {
-    alignItems: 'center',
-    marginVertical: 6,
-  },
-  swapBtn: {
-    backgroundColor: 'white',
-    borderRadius: 999,
-    padding: 6,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-
   findPathButton: {
-    marginTop: 10,
-    width: '100%',
-    height: 48,
+    width: 75,
+    height: 86,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#416cec',
-    borderRadius: 12,
-    paddingHorizontal: 15,
+    borderRadius: 10,
   },
   buttonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
-  },
-  mapContainer: {
-    // 지도 영역을 확보하기 위한 높이 설정
-    flex: 1,
-    borderRadius: 15,
-    overflow: 'hidden',
-    marginVertical: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  mapView: {
-    flex: 1,
   },
 });
 
