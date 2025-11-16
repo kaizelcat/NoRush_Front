@@ -132,10 +132,7 @@ const getCurrentDatetime = () => {
         <View style={styles.container}>
           <StatusBar style="dark-content" />
 
-<<<<<<< HEAD
-=======
           {/* === Search Container (기존 UI 유지) === */}
->>>>>>> remotes/origin/feature/user-location
           <View style={styles.searchContainer}>
             {/* 출발지 입력 */}
             <View className="locationRow" style={styles.locationRow}>
@@ -184,11 +181,6 @@ const getCurrentDatetime = () => {
             </TouchableOpacity>
           </View>
 
-<<<<<<< HEAD
-          <View style={styles.mapContainer}>
-            <KakaoMapView ref={mapViewRef} style={styles.mapView} /> 
-
-=======
           {/* === Map Container (KakaoMapView에 userLocation 전달) === */}
           <View style={styles.mapContainer}>
             <KakaoMapView 
@@ -196,7 +188,6 @@ const getCurrentDatetime = () => {
                 style={styles.mapView} 
                 initialLocation={userLocation} // ⭐️ 여기로 위치 정보를 전달!
             />
->>>>>>> remotes/origin/feature/user-location
           </View>
         </View>
       </SafeAreaView>
