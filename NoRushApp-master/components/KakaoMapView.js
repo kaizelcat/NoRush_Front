@@ -6,7 +6,7 @@ import { WebView } from 'react-native-webview';
 // 경고: '../setting.js' 파일에 KAKAO_JAVASCRIPT_KEY가 실제로 존재하는지 확인하세요.
 import { KAKAO_JAVASCRIPT_KEY } from '../setting.js'; 
 
-// ⭐️ WebView에 로드될 HTML 콘텐츠 (기존 코드 그대로 유지)
+// WebView에 로드될 HTML 콘텐츠 (기존 코드 그대로 유지)
 const htmlContent = (key) => `
 <!DOCTYPE html>
 <html>
@@ -31,13 +31,13 @@ const htmlContent = (key) => `
     <script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=${key}"></script>
     
     <script>
-        // ⭐️ 지도, 마커, 순서 처리 플래그 전역 변수
+        // 지도, 마커, 순서 처리 플래그 전역 변수
         var map;
         var userMarker = null;
         var isMapReady = false; // 지도가 초기화되었는지 여부
         var pendingLocation = null; // 지도가 준비되기 전에 받은 위치 정보
 
-        // ⭐️ React Native로부터 위치를 받아 지도 중앙을 이동하고 마커를 표시하는 함수
+        // React Native로부터 위치를 받아 지도 중앙을 이동하고 마커를 표시하는 함수
         function moveMapCenterAndAddMarker(lat, lng) {
             
             if (!isMapReady) {
@@ -84,11 +84,11 @@ const htmlContent = (key) => `
                 map = new kakao.maps.Map(mapContainer, mapOption);
                 map.addOverlayMapTypeId(kakao.maps.MapTypeId.TRAFFIC);
                 
-                // ⭐️ 지도가 준비됨을 알림
+                // 지도가 준비됨을 알림
                 isMapReady = true; 
                 logToReactNative('Kakao Map initialized successfully!');
 
-                // ⭐️ 지도가 준비되는 동안 받은 위치 정보가 있다면 즉시 적용
+                // 지도가 준비되는 동안 받은 위치 정보가 있다면 즉시 적용
                 if (pendingLocation) {
                     moveMapCenterAndAddMarker(pendingLocation.lat, pendingLocation.lng);
                     pendingLocation = null;
@@ -109,7 +109,7 @@ const KakaoMapView = ({ style, initialLocation }) => {
 
     useEffect(() => {
         if (initialLocation) {
-            // ⭐️ 500ms 지연 추가: WebView 로드 완료를 기다립니다.
+            // 500ms 지연 추가: WebView 로드 완료를 기다립니다.
             const timeout = setTimeout(() => {
                 if (webviewRef.current) {
                     const { latitude, longitude } = initialLocation;
@@ -130,7 +130,7 @@ const KakaoMapView = ({ style, initialLocation }) => {
     }, [initialLocation]);
 
     const onMessage = (event) => {
-        // ⭐️ 디버깅 로그 활성화: WebView 내부에서 전달된 메시지를 확인합니다.
+        // 디버깅 로그 활성화: WebView 내부에서 전달된 메시지를 확인합니다.
         console.log('[Kakao WebView LOG]:', event.nativeEvent.data);
     };
 
@@ -144,7 +144,7 @@ const KakaoMapView = ({ style, initialLocation }) => {
                 domStorageEnabled={true}
                 style={styles.webView}
                 androidLayerType={Platform.OS === 'android' ? 'software' : 'none'} 
-                onMessage={onMessage} // ⭐️ onMessage 핸들러 연결
+                onMessage={onMessage} // onMessage 핸들러 연결
                 onError={(e) => console.warn('WebView Error (RN Side):', e.nativeEvent)}
                 onHttpError={(e) => console.warn('HTTP Error (RN Side):', e.nativeEvent)}
             />

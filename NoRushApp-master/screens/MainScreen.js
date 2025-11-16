@@ -18,14 +18,19 @@ import React, { useState, useEffect } from 'react';
 import KakaoMapView from '../components/KakaoMapView';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
+import { BASE_URL } from '../setting';
 
-// ⭐️ 서버 IP 주소와 포트 적용
-const SERVER_URL = 'http://54.180.137.9:8080'; 
+const SERVER_URL = `http://${BASE_URL}:8080`; 
 const API_ENDPOINT = '/api/v1/route/predict/station'; 
 
 const getAccessToken = async () => {
     try {
         const token = await AsyncStorage.getItem('ACCESS_TOKEN');
+        if (token) {
+            console.log('✅ 토큰 확인됨:', token.substring(0, 30) + '...');
+        } else {
+            console.log('❌ 토큰이 없습니다.');
+        }
         return token;
     } catch (e) {
         console.error('Failed to retrieve token', e);
@@ -39,7 +44,6 @@ const MainScreen = () => {
   const [startStation, setStartStation] = useState('');
   const [endStation, setEndStation] = useState('');
 
-  // 현재 위치 가져오기 (실제 GPS)
   const getMyCoordinates = async () => {
     const { status } = await Location.requestForegroundPermissionsAsync();
     if (status !== 'granted') {
@@ -49,7 +53,6 @@ const MainScreen = () => {
     return location.coords;
   };
 
-  // 컴포넌트 로드 시, 지도의 초기 위치를 가져오는 로직
   useEffect(() => {
     (async () => {
       const coords = await getMyCoordinates();
@@ -63,7 +66,6 @@ const MainScreen = () => {
     })();
   }, []);
 
-  // '내 위치' 버튼 클릭 시 호출
   const handleUseMyLocation = async (setter) => {
     const coords = await getMyCoordinates();
     if (!coords) {
@@ -73,35 +75,29 @@ const MainScreen = () => {
     
     console.log('내 좌표(lat, lng):', coords.latitude, coords.longitude);
     setUserLocation(coords); 
-    // 서버는 장소 이름을 요구하므로, 임시로 좌표를 넣지만, 사용자에게 변경 안내
     setter(`${coords.latitude.toFixed(5)}, ${coords.longitude.toFixed(5)}`); 
     Alert.alert('안내', '경로 검색을 위해 입력창의 좌표를 장소 이름(예: 서울역)으로 변경해주세요.');
   };
 
-  // ⭐️ [충돌 해결 완료] API 연동 로직 채택
   const handleSearch = async () => {
     if (!startStation || !endStation) {
       Alert.alert('알림', '출발지와 도착지를 모두 입력해주세요.');
       return;
     }
 
-    // 1. 팀원 코드를 반영하여 키보드 닫기
     Keyboard.dismiss(); 
 
-    // 2. 좌표 입력 방지 유효성 검사 (사용자 코드 채택)
     if (startStation.includes(',') || endStation.includes(',')) {
         Alert.alert('입력 오류', '출발지와 도착지는 "서울역"과 같은 장소 이름으로 입력해야 합니다.');
         return;
     }
 
-    // 3. 서버가 요구하는 datetime 형식 생성 (사용자 코드 채택)
     const now = new Date();
     const datetime = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}T${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:00`;
 
     try {
         console.log(`📡 경로 검색 요청: ${startStation} -> ${endStation} at ${datetime}`);
 
-        // 4. 인증 토큰 가져오기
         const token = await getAccessToken();
         if (!token) {
             Alert.alert('인증 오류', '로그인이 필요합니다. 로그인 화면으로 이동합니다.');
@@ -109,7 +105,6 @@ const MainScreen = () => {
             return;
         }
 
-        // 5. API 호출
         const response = await fetch(`${SERVER_URL}${API_ENDPOINT}`, {
             method: 'POST',
             headers: {
@@ -117,8 +112,8 @@ const MainScreen = () => {
                 'Authorization': `Bearer ${token}`,
             },
             body: JSON.stringify({
-                from: startStation, // ⭐️ 장소 이름
-                to: endStation,     // ⭐️ 장소 이름
+                from: startStation, 
+                to: endStation,     
                 datetime: datetime, 
             }),
         });
@@ -131,11 +126,18 @@ const MainScreen = () => {
         const responseData = await response.json();
         
         if (responseData && responseData.result) {
+            if (!responseData.result.route || responseData.result.route.length === 0) {
+                Alert.alert('검색 결과 없음', '해당 경로에 대한 정보를 찾을 수 없습니다.');
+                return;
+            }
+            
             console.log('✅ API 응답 성공, RouteResults로 이동');
             
             navigation.navigate('RouteResults', {
                 routeData: responseData.result,
-                customName: `${startStation} → ${endStation}`, 
+                customName: `${startStation} → ${endStation}`,
+                from: startStation,
+                to: endStation,
             });
         } else {
              throw new Error("경로 데이터가 응답 결과(result 필드)에 포함되지 않았습니다.");
@@ -143,7 +145,22 @@ const MainScreen = () => {
 
     } catch (error) {
         console.error("경로 검색 중 오류 발생:", error);
-        Alert.alert('검색 실패', `경로 추천 서버 통신 오류: ${error.message}`);
+        
+        let errorMessage = '경로 검색 중 오류가 발생했습니다.';
+        
+        if (error.message) {
+            if (error.message.includes('429') || error.message.includes('Too Many Requests')) {
+                errorMessage = '서비스 사용량이 초과되었습니다.\n잠시 후 다시 시도해주세요.';
+            } 
+            else if (error.message.includes('500')) {
+                errorMessage = '서버에 일시적인 문제가 발생했습니다.\n잠시 후 다시 시도해주세요.';
+            }
+            else {
+                errorMessage = `경로 검색 실패: ${error.message}`;
+            }
+        }
+        
+        Alert.alert('검색 실패', errorMessage);
     }
   };
   
@@ -168,7 +185,6 @@ const MainScreen = () => {
         <View style={styles.container}>
           <StatusBar style="dark-content" />
 
-          {/* === Map Container === */}
           <View style={styles.mapContainer}>
             <KakaoMapView 
                 style={styles.mapView} 
@@ -176,7 +192,6 @@ const MainScreen = () => {
             />
           </View>
 
-          {/* === Search Box (Overlay) === */}
           <View style={styles.searchBox}>
             {/* 왼쪽: 위치 변경 버튼 */}
             <TouchableOpacity style={styles.swapBtnLeft} onPress={swapLocations}>

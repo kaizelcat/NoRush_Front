@@ -1,4 +1,6 @@
-const SERVER_HOST = 'http://54.180.137.9:8080';
+import { BASE_URL } from '../setting';
+
+const SERVER_HOST = `http://${BASE_URL}:8080`;
 
 // 📌 사용자 인증에 필요한 액세스 토큰은 실제 앱에서는 AsyncStorage 등에 저장된 것을 불러와야 합니다.
 // 📌 여기서는 임시 값으로 대체합니다. 실제 로직에서는 반드시 토큰을 불러오세요.

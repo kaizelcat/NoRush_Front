@@ -2,21 +2,19 @@
 
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { BASE_URL } from '../setting';
 
-// ⭐️ 서버 정보 설정 (사용자님의 HEAD 코드로 확정)
-const SERVER_HOST = 'http://54.180.137.9:8080'; 
-const REGISTER_ENDPOINT = '/api/v1/auth/signup'; 
-// BASE_URL은 setting.js에서 import 해야 하나, 충돌 시 안전을 위해 직접 URL 사용
+const REGISTER_ENDPOINT = '/api/v1/auth/signup';
 
 export default function RegisterScreen({ navigation }) {
     const [form, setForm] = useState({
         name: '',
         email: '',
-        // ⭐️ 필드 이름: 팀원 코드(upstream)의 'phoneNumber'로 통일
+        // 필드 이름: 팀원 코드(upstream)의 'phoneNumber'로 통일
         phoneNumber: '', 
         password: ''
     });
-    // ⭐️ 로딩 상태와 필드별 에러 상태 모두 사용 (두 코드의 장점 통합)
+    // 로딩 상태와 필드별 에러 상태 모두 사용 (두 코드의 장점 통합)
     const [isLoading, setIsLoading] = useState(false); 
     const [fieldErrors, setFieldErrors] = useState({});
 
@@ -39,10 +37,10 @@ export default function RegisterScreen({ navigation }) {
         setFieldErrors({});
         setIsLoading(true);
 
-        // ⭐️ 전화번호에서 하이픈(-)을 제거하고 순수 숫자만 추출 (사용자 코드 채택)
+        // 전화번호에서 하이픈(-)을 제거하고 순수 숫자만 추출 (사용자 코드 채택)
         const cleanPhone = form.phoneNumber.replace(/-/g, '');
         
-        // ⭐️ 서버에 전송할 최종 데이터 (cleanPhone 사용)
+        // 서버에 전송할 최종 데이터 (cleanPhone 사용)
         const dataToSend = {
             name: form.name,
             email: form.email,
@@ -133,7 +131,7 @@ export default function RegisterScreen({ navigation }) {
                 style={styles.input}
                 placeholder="전화번호 (하이픈 없이)"
                 placeholderTextColor="#666666"
-                // ⭐️ form.phoneNumber로 변경
+                // form.phoneNumber로 변경
                 value={form.phoneNumber} 
                 onChangeText={(value) => handleChange('phoneNumber', value)}
                 keyboardType="phone-pad"
@@ -173,7 +171,7 @@ const styles = StyleSheet.create({
     container: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', padding: 20, backgroundColor: '#ffffff' },
     title: { fontSize: 28, fontWeight: 'bold', marginBottom: 24 },
     input: { width: '100%', borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12, marginBottom: 12, fontSize: 16 },
-    // ⭐️ 에러 텍스트 스타일 (팀원 코드 채택)
+    // 에러 텍스트 스타일 (팀원 코드 채택)
     errorText: { 
         width: '100%',
         color: 'red',

@@ -116,7 +116,7 @@ const RouteSummaryCard = ({ route, index, isSelected, onSelect }) => {
 
 
 export default function RouteResultScreen({ route, navigation }) {
-    const { from, to } = route?.params || {};
+    const { from, to, routeData: passedRouteData } = route?.params || {};
 
     const [allRoutes, setAllRoutes] = useState([]);
     const [selectedRouteIndex, setSelectedRouteIndex] = useState(0); 
@@ -139,8 +139,37 @@ export default function RouteResultScreen({ route, navigation }) {
 
     useEffect(() => {
         const fetchRoute = async () => {
+            // routeData가 이미 전달된 경우 (MainScreen에서 호출)
+            if (passedRouteData?.route && Array.isArray(passedRouteData.route)) {
+                // 빈 배열 체크
+                if (passedRouteData.route.length === 0) {
+                    Alert.alert('검색 결과 없음', '해당 경로에 대한 정보를 찾을 수 없습니다.');
+                    setLoading(false);
+                    return;
+                }
+                
+                setAllRoutes(passedRouteData.route);
+                setSelectedRouteIndex(0);
+                
+                const firstRoute = passedRouteData.route[0];
+                setRouteId(
+                    firstRoute.info?.mapObj ??
+                    `${firstRoute.info?.firstStartStation ?? ''}-${
+                        firstRoute.info?.lastEndStation ?? ''
+                    }-${Date.now()}`
+                );
+                setLoading(false);
+                return;
+            }
 
-          const datetime = getCurrentDatetime(); // YYYY-MM-DDTHH:MM:SS 형식
+            // from과 to가 없는 경우 API 호출 불가
+            if (!from || !to) {
+                Alert.alert('오류', '출발지와 도착지 정보가 없습니다.');
+                setLoading(false);
+                return;
+            }
+
+            const datetime = getCurrentDatetime(); // YYYY-MM-DDTHH:MM:SS 형식
             
             // T를 기준으로 시간 부분(HH:MM:SS)만 추출
             const timePart = datetime.split('T')[1]; 
@@ -194,6 +223,7 @@ export default function RouteResultScreen({ route, navigation }) {
 
                 if (!apiResponse?.result?.route?.length) {
                     Alert.alert('검색 결과 없음', '해당 경로에 대한 정보를 찾을 수 없습니다.');
+                    setLoading(false);
                     return;
                 }
 
@@ -216,7 +246,7 @@ export default function RouteResultScreen({ route, navigation }) {
         };
 
         fetchRoute();
-    }, [from, to]);
+    }, [from, to, passedRouteData]);
 
     useEffect(() => {
         if (routeData) {

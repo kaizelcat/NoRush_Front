@@ -19,6 +19,13 @@ const MyPage = () => {
     const loadUserInfo = async () => {
         try {
             const token = await AsyncStorage.getItem("ACCESS_TOKEN");
+            
+            // 토큰 확인 로그
+            if (token) {
+                console.log('✅ ACCESS_TOKEN 저장 확인:', token.substring(0, 20) + '...');
+            } else {
+                console.log('❌ ACCESS_TOKEN이 저장되어 있지 않습니다.');
+            }
 
             const res = await fetch(`http://${BASE_URL}:8080/api/v1/auth/me`, {
                 method: "GET",
@@ -134,7 +141,7 @@ const MyPage = () => {
                 <View style={styles.profileSection}>
                     <Image
                         style={styles.profileImage}
-                        source={profileImageUrl} // ⬅️ 저장된 프로필 이미지 사용
+                        source={profileImageUrl} // 저장된 프로필 이미지 사용
                     />
                     {/* 저장된 사용자 이름 사용 */}
                     <Text style={styles.profileName}>{displayName}</Text> 
