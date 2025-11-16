@@ -50,24 +50,24 @@ export default function LoginScreen({ navigation }) {
                 await AsyncStorage.setItem('USER_INFO', JSON.stringify(userInfo));
                 console.log('사용자 정보 저장 완료');
                 
-                const responseData = await response.json(); 
-                console.log('로그인 성공 응답 전체:', responseData);
+                //const responseData = await response.json(); 
+                //console.log('로그인 성공 응답 전체:', data);
 
                 // 실제 사용자 정보가 'data' 필드 안에 들어있다고 가정
                 // mainscreen.js에서 저장해둠
-                const userData = responseData.data;
+                const userData = data.data;
 
-                if (userData) {
-                    // AsyncStorage에 사용자 정보(토큰 포함) 저장
-                    await AsyncStorage.setItem('USER_INFO', JSON.stringify(userData));
-                    console.log('사용자 정보 저장 완료');
+                // if (userData) {
+                //     // AsyncStorage에 사용자 정보(토큰 포함) 저장
+                //     await AsyncStorage.setItem('USER_INFO', JSON.stringify(userData));
+                //     console.log('사용자 정보 저장 완료');
                     
-                    // 로그인 성공 -> 메인 화면으로 이동! 
-                    navigation.replace('Main');
-                } else {
-                    alert('로그인 처리 중 사용자 정보를 찾을 수 없습니다. (서버 응답 구조 확인 필요)');
-                    console.error('응답 구조 오류: data 필드가 없습니다.', responseData);
-                }
+                //     // 로그인 성공 -> 메인 화면으로 이동! 
+                navigation.replace('Main');
+                // } else {
+                //     alert('로그인 처리 중 사용자 정보를 찾을 수 없습니다. (서버 응답 구조 확인 필요)');
+                //     console.error('응답 구조 오류: data 필드가 없습니다.', data);
+                // }
 
 
             } else {
@@ -77,12 +77,6 @@ export default function LoginScreen({ navigation }) {
                 alert(`로그인 실패: ${errorData.msg || response.statusText}`); 
                 console.error('로그인 실패 응답:', errorData);
             }
-
-          } else {
-              // HTTP 상태 코드가 4xx, 5xx 등 실패인 경우
-              const errorData = await response.json();
-              alert(`로그인 실패: ${errorData.msg || response.statusText}`);
-              console.error('로그인 실패 응답:', errorData);
           }
       } catch (error) {
           // 네트워크 연결 자체의 오류 (타임아웃, 서버 연결 불가 등)

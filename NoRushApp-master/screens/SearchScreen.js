@@ -53,26 +53,25 @@ export default function SearchScreen() {
     setIsLoading(true);
 
     try {
-      // USER_INFO 불러오기
-      const userInfoString = await AsyncStorage.getItem("USER_INFO");
-      if (!userInfoString) {
+      // 토큰 가져오기
+      const accessToken = await AsyncStorage.getItem("ACCESS_TOKEN");
+      if (!accessToken) {
         Alert.alert("인증 오류", "로그인 정보가 없습니다.");
-        setIsLoading(false);
         return;
       }
-      console.log("Info data 가져옴", userInfoString);
+      console.log("사용할 토큰:", accessToken);
 
-      const userInfo = JSON.parse(userInfoString);
-      const token = userInfo?.data?.accessToken;
-      console.log("사용할 토큰:", token);
+      // const userInfo = JSON.parse(userInfoString);
+      // const token = userInfo?.data?.accessToken;
+      // console.log("사용할 토큰:", token);
 
-      if (!token) {
+      if (!accessToken) {
         Alert.alert("인증 오류", "Access Token이 없습니다.");
         setIsLoading(false);
         return;
       }
 
-      console.log("token 가져옴", token);
+      // console.log("token 가져옴", accessToken);
 
       const currentDatetime = getCurrentDatetime();
       const requestBody = {
@@ -88,7 +87,7 @@ export default function SearchScreen() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`, 
+          'Authorization': `Bearer ${accessToken}`, 
         },
         body: JSON.stringify(requestBody),
       });

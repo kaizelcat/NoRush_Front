@@ -16,7 +16,7 @@ import { useFavorites } from '../contexts/FavoritesContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BASE_URL } from '../setting';
 
-const API_URL = `http://${BASE_URL}/api/v1/route/predict/station`;
+const API_URL = `http://10.0.2.2:8080/api/v1/route/predict/station`;
 
 // 현재 시간(시/분/초)을 포함하여 동적으로 설정
 const getCurrentDatetime = () => {
@@ -159,20 +159,17 @@ export default function RouteResultScreen({ route, navigation }) {
 
 
             try {
-                const userInfoString = await AsyncStorage.getItem('USER_INFO');
-                if (!userInfoString) {
-                    Alert.alert('인증 오류', '로그인 정보가 없습니다.');
+                //액세스 토큰 스토리지에서 꺼내기
+                const accessToken = await AsyncStorage.getItem("ACCESS_TOKEN");
+
+                if (!accessToken) {
+                    Alert.alert("인증 오류", "로그인이 필요합니다.");
                     setLoading(false);
                     return;
                 }
 
-                const userInfo = JSON.parse(userInfoString);
-                const token = userInfo?.accessToken;
-                if (!token) {
-                    Alert.alert('인증 오류', 'Access Token이 없습니다.');
-                    setLoading(false);
-                    return;
-                }
+                console.log("사용할 Access Token:", accessToken);
+
 
                 const datetime = getCurrentDatetime();
                 const requestBody = { from, to, datetime };
@@ -182,7 +179,7 @@ export default function RouteResultScreen({ route, navigation }) {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        Authorization: `Bearer ${token}`,
+                        Authorization: `Bearer ${accessToken}`,
                     },
                     body: JSON.stringify(requestBody),
                 });
