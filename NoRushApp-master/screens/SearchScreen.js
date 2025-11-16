@@ -1,3 +1,5 @@
+// 해당 페이지 삭제 후 RouteResultsScreen.js와 통합
+
 import React, { useState } from 'react';
 import { 
   View, 
@@ -13,11 +15,7 @@ import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialIcons, Ionicons, FontAwesome5 } from '@expo/vector-icons';
 
-// =======================================================
-//  [ API 설정 및 헬퍼 함수 ]
-// =======================================================
-
-const API_URL = "http://54.180.137.9:8080/api/v1/route/predict/station";
+const API_URL = "-";
 
 // 혼잡도 예측값 (0~100)을 레벨로 변환
 const getCongestionLevel = (value) => {
@@ -27,27 +25,25 @@ const getCongestionLevel = (value) => {
   return '여유';
 };
 
-// 현재 시간을 'YYYYMMDDHHMM' 형식으로 반환
-const getInitialTime = () => {
+// 현재 시간을 'YYYY-MM-DDTHH:mm:ss' 형식으로 반환
+const getCurrentDatetime = () => {
   const date = new Date();
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   const hours = String(date.getHours()).padStart(2, '0');
   const minutes = String(date.getMinutes()).padStart(2, '0');
-  return `${year}${month}${day}${hours}${minutes}`;
+  const seconds = String(date.getSeconds()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
 };
 
 export default function SearchScreen() {
   const navigation = useNavigation();
-
-  const [startPoint, setStartPoint] = useState('서울역');
-  const [endPoint, setEndPoint] = useState('홍대입구역');
+  Alert.alert("검색 실패", "내용확인중");
+  const [startPoint, setStartPoint] = useState('');
+  const [endPoint, setEndPoint] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  /**
-   * 경로 검색 API 호출
-   */
   const handleSearch = async () => {
     if (!startPoint || !endPoint || isLoading) {
       Alert.alert("필수 입력", "출발지와 도착지를 모두 입력해주세요.");
@@ -57,24 +53,36 @@ export default function SearchScreen() {
     setIsLoading(true);
 
     try {
-      //  AsyncStorage에서 토큰 직접 가져오기
-      const token = await AsyncStorage.getItem("ACCESS_TOKEN_KEY");
+      // USER_INFO 불러오기
+      const userInfoString = await AsyncStorage.getItem("USER_INFO");
+      if (!userInfoString) {
+        Alert.alert("인증 오류", "로그인 정보가 없습니다.");
+        setIsLoading(false);
+        return;
+      }
+      console.log("Info data 가져옴", userInfoString);
+
+      const userInfo = JSON.parse(userInfoString);
+      const token = userInfo?.data?.accessToken;
       console.log("사용할 토큰:", token);
 
       if (!token) {
-        Alert.alert("인증 오류", "로그인 정보(Access Token)가 없습니다.");
+        Alert.alert("인증 오류", "Access Token이 없습니다.");
         setIsLoading(false);
         return;
       }
 
-      const currentDatetime = getInitialTime();
+      console.log("token 가져옴", token);
+
+      const currentDatetime = getCurrentDatetime();
       const requestBody = {
         from: startPoint,
         to: endPoint,
         datetime: currentDatetime,
       };
 
-      console.log("📡 API 요청 시작:", requestBody);
+      console.log("현재 requestBody",requestBody);
+      console.log("API 요청 시작:", requestBody);
 
       const response = await fetch(API_URL, {
         method: 'POST',
@@ -105,31 +113,35 @@ export default function SearchScreen() {
 
       // 모든 section을 변환
       const transformedSegments = Array.isArray(mainRoute.section)
-        ? mainRoute.section.map(segment => {
-            const isSubway = segment.trafficType === 1;
-            let line = segment.trafficName || (isSubway ? '지하철' : '도보/환승');
-            let cars = [];
+  ? mainRoute.section.map(segment => {
+      const isSubway = segment.trafficType === 1;
+      const isWalk = segment.trafficType === 3;
 
-            if (isSubway && segment.passStopList?.stations?.length > 0) {
-              // 모든 역을 돌면서 혼잡도 데이터 반영
-              cars = segment.passStopList.stations.flatMap(station =>
-                (station.predictedCongestionCar || []).map((value, index) => ({
-                  car: `${index + 1}`,
-                  level: getCongestionLevel(value),
-                  value,
-                  station: station.stationName,
-                }))
-              );
-            }
+      let line = segment.trafficName || (isSubway ? '지하철' : isWalk ? '도보' : '기타');
+      let cars = [];
 
-            return {
-              line,
-              from: segment.startName || info.firstStartStation,
-              to: segment.endName || info.lastEndStation,
-              cars,
-            };
-          })
-        : [];
+      if (isSubway && segment.passStopList?.stations?.length > 0) {
+        // 모든 역을 돌면서 혼잡도 데이터 반영
+        cars = segment.passStopList.stations.flatMap(station =>
+          (station.predictedCongestionCar || []).map((value, index) => ({
+            car: `${index + 1}`,
+            level: getCongestionLevel(value),
+            value,
+            station: station.stationName,
+          }))
+        );
+      }
+
+      return {
+        line,
+        from: segment.startName || mainRoute.info.firstStartStation,
+        to: segment.endName || mainRoute.info.lastEndStation,
+        cars,
+        summary: segment.sectionSummary || null,
+      };
+    })
+  : [];
+
 
       const routeData = {
         id: info.mapObj,
@@ -163,82 +175,80 @@ export default function SearchScreen() {
     setEndPoint(temp);
   };
 
-    const quickActions = [
-        { icon: "home", label: "집", color: "#e0f2fe" },
-        { icon: "briefcase", label: "직장", color: "#dcfce7" },
-        { icon: "star", label: "즐겨찾기", color: "#f3e8ff" },
-    ];
+  const quickActions = [
+    { icon: "home", label: "집", color: "#e0f2fe" },
+    { icon: "briefcase", label: "직장", color: "#dcfce7" },
+    { icon: "star", label: "즐겨찾기", color: "#f3e8ff" },
+  ];
 
-    const recentSearches = [
-        { from: "Central Park", to: "Times Square", time: "2 hours ago" },
-        { from: "Brooklyn Bridge", to: "SoHo", time: "Yesterday" },
-    ];
+  const recentSearches = [
+    { from: "Central Park", to: "Times Square", time: "2 hours ago" },
+    { from: "Brooklyn Bridge", to: "SoHo", time: "Yesterday" },
+  ];
 
-    return (
-        <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
-            <View style={styles.section}>
-                <View style={styles.card}>
-                    {/* 출발지 입력 */}
-                    <View style={styles.inputRow}>
-                        <View style={styles.dotGreen} />
-                        <TextInput
-                            style={styles.input}
-                            placeholder="출발지"
-                            value={startPoint} 
-                            onChangeText={setStartPoint}
-                        />
-                        <TouchableOpacity
-                            style={styles.iconBtn}
-                            onPress={() => setStartPoint("현재 위치")}
-                        >
-                            <MaterialIcons name="my-location" size={20} color="gray" />
-                        </TouchableOpacity>
-                    </View>
+  return (
+    <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
+      <View style={styles.section}>
+        <View style={styles.card}>
+          <View style={styles.inputRow}>
+            <View style={styles.dotGreen} />
+            <TextInput
+              style={styles.input}
+              placeholder="출발지"
+              value={startPoint} 
+              onChangeText={setStartPoint}
+            />
+            <TouchableOpacity
+              style={styles.iconBtn}
+              onPress={() => setStartPoint("현재 위치")}
+            >
+              <MaterialIcons name="my-location" size={20} color="gray" />
+            </TouchableOpacity>
+          </View>
 
-                    <View style={styles.centered}>
-                        <TouchableOpacity style={styles.swapBtn} onPress={swapLocations}>
-                            <MaterialIcons name="swap-vert" size={24} color="#4b5563" />
-                        </TouchableOpacity>
-                    </View>
+          <View style={styles.centered}>
+            <TouchableOpacity style={styles.swapBtn} onPress={swapLocations}>
+              <MaterialIcons name="swap-vert" size={24} color="#4b5563" />
+            </TouchableOpacity>
+          </View>
 
-                    {/* 도착지 입력 */}
-                    <View style={styles.inputRow}>
-                        <View style={styles.dotRed} />
-                        <TextInput
-                            style={styles.input}
-                            placeholder="도착지"
-                            value={endPoint} 
-                            onChangeText={setEndPoint}
-                        />
-                        <View style={styles.iconBtn} />
-                    </View>
+          <View style={styles.inputRow}>
+            <View style={styles.dotRed} />
+            <TextInput
+              style={styles.input}
+              placeholder="도착지"
+              value={endPoint} 
+              onChangeText={setEndPoint}
+            />
+            <View style={styles.iconBtn} />
+          </View>
 
-                    {/* 시간 설정 */}
-                    <View style={styles.timeRow}>
-                        <Ionicons name="time-outline" size={16} color="#2563eb" />
-                        <Text style={styles.timeText}>출발 시간 (현재 시각으로 검색)</Text>
-                    </View>
+          
+          <View style={styles.timeRow}>
+            <Ionicons name="time-outline" size={16} color="#2563eb" />
+            <Text style={styles.timeText}>출발 시간 (현재 시각으로 검색)</Text>
+          </View>
 
-                    {/* 검색 버튼 */}
-                    <TouchableOpacity
-                        style={[styles.searchBtn, (!startPoint || !endPoint || isLoading) && styles.disabledBtn]}
-                        onPress={handleSearch}
-                        disabled={!startPoint || !endPoint || isLoading}
-                    >
-                        {isLoading ? (
-                            <ActivityIndicator size="small" color="white" />
-                        ) : (
-                            <>
-                                <Ionicons name="search" size={18} color="white" style={{ marginRight: 6 }} />
-                                <Text style={styles.searchBtnText}>경로 검색</Text>
-                            </>
-                        )}
-                    </TouchableOpacity>
-                </View>
+         
+          <TouchableOpacity
+            style={[styles.searchBtn, (!startPoint || !endPoint || isLoading) && styles.disabledBtn]}
+            onPress={handleSearch}
+            disabled={!startPoint || !endPoint || isLoading}
+          >
+            {isLoading ? (
+              <ActivityIndicator size="small" color="white" />
+            ) : (
+              <>
+                <Ionicons name="search" size={18} color="white" style={{ marginRight: 6 }} />
+                <Text style={styles.searchBtnText}>경로 검색</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
 
-                {/* 퀵 메뉴 */}
-                <Text style={styles.sectionTitle}>퀵 메뉴</Text>
-                <View style={styles.quickGrid}>
+       
+        <Text style={styles.sectionTitle}>퀵 메뉴</Text>
+        <View style={styles.quickGrid}>
                     {quickActions.map((action, idx) => (
                         <TouchableOpacity key={idx} style={styles.quickItem}>
                             <View style={[styles.quickIconWrapper, { backgroundColor: action.color }]}>
@@ -249,7 +259,6 @@ export default function SearchScreen() {
                     ))}
                 </View>
 
-                {/* 최근 검색 경로 */}
                 <Text style={styles.sectionTitle}>최근 검색 경로</Text>
                 {recentSearches.map((search, idx) => (
                     <View key={idx} style={styles.recentCard}>
@@ -266,6 +275,8 @@ export default function SearchScreen() {
         </ScrollView>
     );
 }
+
+
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: "#f0f8ff" },

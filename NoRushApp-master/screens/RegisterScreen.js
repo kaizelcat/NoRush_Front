@@ -1,6 +1,7 @@
 // 회원가입 페이지
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native'; // Alert 추가
+import { BASE_URL } from '../setting';
 
 export default function RegisterScreen({ navigation }) {
   const [form, setForm] = useState({
@@ -47,7 +48,7 @@ export default function RegisterScreen({ navigation }) {
 
        const responseText = await response.text(); 
       console.log('HTTP 상태 코드:', response.status);
-      console.log('서버 응답 본문 (TEXT):', responseText); // 이 로그를 통해 HTML 내용을 확인!
+      console.log('서버 응답 본문 (TEXT):', responseText); 
       
        // 성공/실패 상관없이 먼저 JSON 파싱
       let data = null;

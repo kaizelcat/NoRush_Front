@@ -1,3 +1,6 @@
+// RouteResultsScreen.js랑 통합했어요 참고
+
+
 // subwayCongestion.js
 // import { useState } from "react";
 // import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -42,11 +45,11 @@ export default function SubwayCongestionScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>🚇 4호선 급행 - 다운타운 방향</Text>
+      <Text style={styles.title}> 4호선 급행 - 다운타운 방향</Text>
       <Text style={styles.subtitle}>다음 열차: 2분 후 14번가 역 도착</Text>
 
       <View style={styles.recommendation}>
-        <Text style={styles.sectionTitle}>⭐ 추천 칸</Text>
+        <Text style={styles.sectionTitle}> 추천 칸</Text>
         <View style={styles.recommendRow}>
           {bestCars.map((car) => (
             <TouchableOpacity
@@ -62,7 +65,7 @@ export default function SubwayCongestionScreen() {
       </View>
 
       <View style={styles.gridContainer}>
-        <Text style={styles.sectionTitle}>🚈 실시간 칸별 혼잡도</Text>
+        <Text style={styles.sectionTitle}> 실시간 칸별 혼잡도</Text>
         <View style={styles.grid}>
           {carData.map((car) => (
             <TouchableOpacity
@@ -90,7 +93,7 @@ export default function SubwayCongestionScreen() {
 
       {selectedCar && (
         <View style={styles.selected}>
-          <Text style={styles.sectionTitle}>ℹ️ {selectedCar}번 칸 정보</Text>
+          <Text style={styles.sectionTitle}> {selectedCar}번 칸 정보</Text>
           <Text style={styles.detailText}>
             혼잡도 상태: {getLevel(carData[selectedCar - 1].occupancy)}
           </Text>

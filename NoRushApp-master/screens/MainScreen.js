@@ -45,29 +45,39 @@ const MainScreen = () => {
     console.log('내 좌표(lat, lng):', coords.latitude, coords.longitude);
     setter(`${coords.latitude.toFixed(5)}, ${coords.longitude.toFixed(5)}`);
   };
+const handleSearch = async () => {
+  if (!startStation || !endStation) {
+    Alert.alert('알림', '출발지와 도착지를 모두 입력해주세요.');
+    return;
+  }
 
-  const handleSearch = async () => {
-    if (!startStation || !endStation) {
-      Alert.alert('알림', '출발지와 도착지를 모두 입력해주세요.');
-      return;
-    }
+  Keyboard.dismiss();
 
-    Keyboard.dismiss();
+  console.log(`검색 시작: ${startStation}에서 ${endStation}까지`);
 
-    console.log(`검색 시작: ${startStation}에서 ${endStation}까지`);
+  // 여기서 API 호출은 하지 않고, 입력값을 RouteResults로 넘김
+  navigation.navigate('RouteResults', {
+    from: startStation,       // 출발역
+    to: endStation,           // 도착역
+    datetime: getCurrentDatetime(), 
+  });
+};
 
-    // TODO: 여기서 API 호출 후 응답 받아서 RouteResults로 넘기기
-    navigation.navigate('RouteResults', {
-      routeData: {
-        start: startStation,
-        end: endStation,
-        customName: `${startStation} → ${endStation}`,
-        etaMinutes: 27,
-        segments: [],
-        alternatives: [],
-      },
-    });
-  };
+const getCurrentDatetime = () => {
+    const date = new Date();
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    
+    // 현재 시, 분, 초를 가져와 포맷에 맞게 추가
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    
+    // YYYY-MM-DDTHH:MM:SS 형식으로 반환
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+};
+
 
   const swapLocations = () => {
     const temp = startStation;
@@ -81,13 +91,12 @@ const MainScreen = () => {
         <View style={styles.container}>
           <StatusBar style="dark-content" />
 
-          {/* === 여기 searchContainer 부분이 네가 만든 UI로 교체된 부분 === */}
           <View style={styles.searchContainer}>
             {/* 출발지 입력 */}
             <View className="locationRow" style={styles.locationRow}>
               <TextInput
                 style={styles.searchInput}
-                placeholder="출발지 (예: 강남)"
+                placeholder="출발지 (예: 강남역)"
                 placeholderTextColor="#888"
                 value={startStation}
                 onChangeText={setStartStation}
@@ -111,7 +120,7 @@ const MainScreen = () => {
             <View style={[styles.locationRow, { marginTop: 10 }]}>
               <TextInput
                 style={styles.searchInput}
-                placeholder="도착지 (예: 사당)"
+                placeholder="도착지 (예: 사당역)"
                 placeholderTextColor="#888"
                 value={endStation}
                 onChangeText={setEndStation}
@@ -130,7 +139,6 @@ const MainScreen = () => {
             </TouchableOpacity>
           </View>
 
-          {/* === 여기부터는 연동 후 코드의 지도 영역 그대로 유지 === */}
           <View style={styles.mapContainer}>
             <KakaoMapView ref={mapViewRef} style={styles.mapView} /> 
 
