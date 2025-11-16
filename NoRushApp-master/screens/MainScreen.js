@@ -4,7 +4,6 @@ import { useNavigation } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import {
   Keyboard,
-  SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
@@ -12,8 +11,13 @@ import {
   TouchableWithoutFeedback,
   View,
   Alert,
+  ActivityIndicator, 
 } from 'react-native';
-import React, { useState, useRef } from 'react';
+// ⭐️ react-native 기본 SafeAreaView 제거
+import React, { useState, useEffect } from 'react'; // useRef 제거
+// ⭐️ 새 SafeAreaView import 추가
+import { SafeAreaView } from 'react-native-safe-area-context'; 
+
 import KakaoMapView from '../components/KakaoMapView';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
@@ -21,28 +25,53 @@ import * as Location from 'expo-location';
 const MainScreen = () => {
   const navigation = useNavigation();
 
+  // ⭐️ 1. 지도 초기 위치 상태 (위도, 경도)
+  const [userLocation, setUserLocation] = useState(null); 
+  
   const [startStation, setStartStation] = useState('');
   const [endStation, setEndStation] = useState('');
 
-  const mapViewRef = useRef(null);
+  // const mapViewRef = useRef(null); // ⭐️ Ref는 KakaoMapView 내부에서만 사용하도록 제거
 
   // 현재 위치 가져오기 (실제 GPS)
   const getMyCoordinates = async () => {
     const { status } = await Location.requestForegroundPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('위치 권한이 필요합니다.');
-      return null;
+      // ⭐️ 위치 권한이 거부된 경우, 지도를 서울 중심으로 띄우기 위해 null 반환
+      return null; 
     }
 
     const location = await Location.getCurrentPositionAsync({});
     return location.coords; // { latitude, longitude }
   };
 
-  // 입력값 setter에 좌표 넣어주는 함수
+  // ⭐️ 2. 컴포넌트 로드 시, 지도의 초기 위치를 가져오는 로직
+  useEffect(() => {
+    (async () => {
+      const coords = await getMyCoordinates();
+      if (coords) {
+        // ⭐️ GPS 위치 가져오기 성공 로그 추가 (디버깅용)
+        console.log('✅ GPS 위치 가져오기 성공:', coords.latitude, coords.longitude); 
+        setUserLocation(coords); // { latitude, longitude } 형식 그대로 저장
+      } else {
+        console.log('❌ GPS 위치 가져오기 실패, 기본 위치 사용');
+        // 권한 거부 등으로 위치를 못 가져오면, 임의의 기본값(서울 등) 설정
+        setUserLocation({ latitude: 37.566826, longitude: 126.9786567 });
+      }
+    })();
+  }, []);
+
+  // 입력값 setter에 좌표 넣어주는 함수 (기존 코드 그대로 유지)
   const handleUseMyLocation = async (setter) => {
     const coords = await getMyCoordinates();
-    if (!coords) return;
+    if (!coords) {
+        Alert.alert('알림', '위치 권한을 허용해주세요.');
+        return;
+    }
+    
     console.log('내 좌표(lat, lng):', coords.latitude, coords.longitude);
+    // ⭐️ 지도에 마커 표시 요청을 트리거하기 위해 userLocation 상태도 업데이트
+    setUserLocation(coords); 
     setter(`${coords.latitude.toFixed(5)}, ${coords.longitude.toFixed(5)}`);
   };
 const handleSearch = async () => {
@@ -85,12 +114,28 @@ const getCurrentDatetime = () => {
     setEndStation(temp);
   };
 
+  // ⭐️ 3. userLocation이 로드되기 전까지 로딩 화면 표시
+  if (!userLocation) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#416cec" />
+        <Text style={styles.loadingText}>위치 정보를 불러오는 중...</Text>
+      </View>
+    );
+  }
+
+  // ⭐️ 4. userLocation이 로드된 후 메인 UI 렌더링
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      {/* ⭐️ react-native-safe-area-context의 SafeAreaView 사용 */}
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.container}>
           <StatusBar style="dark-content" />
 
+<<<<<<< HEAD
+=======
+          {/* === Search Container (기존 UI 유지) === */}
+>>>>>>> remotes/origin/feature/user-location
           <View style={styles.searchContainer}>
             {/* 출발지 입력 */}
             <View className="locationRow" style={styles.locationRow}>
@@ -139,9 +184,19 @@ const getCurrentDatetime = () => {
             </TouchableOpacity>
           </View>
 
+<<<<<<< HEAD
           <View style={styles.mapContainer}>
             <KakaoMapView ref={mapViewRef} style={styles.mapView} /> 
 
+=======
+          {/* === Map Container (KakaoMapView에 userLocation 전달) === */}
+          <View style={styles.mapContainer}>
+            <KakaoMapView 
+                // ref={mapViewRef} // ⭐️ KakaoMapView 내부에서 처리하므로 제거
+                style={styles.mapView} 
+                initialLocation={userLocation} // ⭐️ 여기로 위치 정보를 전달!
+            />
+>>>>>>> remotes/origin/feature/user-location
           </View>
         </View>
       </SafeAreaView>
@@ -157,6 +212,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: 15,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#4b5563',
   },
   searchContainer: {
     marginTop: 30,
