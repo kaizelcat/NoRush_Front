@@ -16,7 +16,7 @@ const MainTabs = () => {
         tabBarIcon: ({ focused, color, size }) => {
           let iconName;
 
-          if (route.name === 'Main') {
+          if (route.name === 'Home') {
             iconName = 'home';
           } else if (route.name === 'Favorites') {
             iconName = focused ? 'bookmark' : 'bookmark-border';
@@ -43,7 +43,7 @@ const MainTabs = () => {
         },
       })}
     >
-      <Tab.Screen name="Main" component={MainStackNavigator} options={{ title: '홈' }} /> 
+      <Tab.Screen name="Home" component={MainStackNavigator} options={{ title: '홈' }} /> 
       <Tab.Screen name="Favorites" component={FavoritesScreen} options={{ title: '즐겨찾기' }} />
       <Tab.Screen name="MyPage" component={MyPageScreen} options={{ title: '마이페이지' }} />
     </Tab.Navigator>

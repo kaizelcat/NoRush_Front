@@ -101,11 +101,20 @@ const MainScreen = () => {
     try {
         console.log(`📡 경로 검색 요청: ${startStation} -> ${endStation} at ${datetime}`);
 
-        // 4. API 호출
+        // 4. 인증 토큰 가져오기
+        const token = await getAccessToken();
+        if (!token) {
+            Alert.alert('인증 오류', '로그인이 필요합니다. 로그인 화면으로 이동합니다.');
+            navigation.navigate('Login');
+            return;
+        }
+
+        // 5. API 호출
         const response = await fetch(`${SERVER_URL}${API_ENDPOINT}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
             },
             body: JSON.stringify({
                 from: startStation, // ⭐️ 장소 이름

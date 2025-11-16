@@ -1,22 +1,15 @@
 import { useState } from 'react';
-import { Linking, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Alert } from 'react-native';
-// ⭐️ 토큰 저장을 위해 AsyncStorage 반드시 필요
-import AsyncStorage from '@react-native-async-storage/async-storage'; 
-
-// 🚨 BASE_URL은 setting.js에서 import 해야 하나, 현재 충돌 상황이므로
-// 안전을 위해 외부 서버 IP를 직접 사용하며, setting.js의 BASE_URL 값을 참고합니다.
-const SERVER_HOST = 'http://54.180.137.9:8080'; 
-const LOGIN_ENDPOINT = '/api/v1/auth/signin';
+import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { BASE_URL } from '../setting';
 
 export default function LoginScreen({ navigation }) {
+    // 입력 상태 관리 (이메일, 비밀번호)
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
 
-    const handleLogin = async () => {
-        if (!email || !password) {
-            Alert.alert('로그인 오류', '이메일과 비밀번호를 모두 입력해주세요.');
-            return;
-        }
+  const handleLogin = async () => {
+    console.log('로그인 시도:', email, password);
 
   const LOGIN_API_URL = `http://${BASE_URL}:8080/api/v1/auth/signin`; 
 
@@ -71,77 +64,71 @@ export default function LoginScreen({ navigation }) {
                     
                 //     // 로그인 성공 -> 메인 화면으로 이동! 
                 navigation.replace('Main');
-                } else {
-                // 로그인 실패 처리 (서버에서 받은 메시지 사용)
-                Alert.alert('로그인 실패', responseData.msg || '아이디 또는 비밀번호가 올바르지 않습니다.');
-                console.error('로그인 실패 응답:', responseData);
-            }
-        } catch (error) {
-            console.error('네트워크 오류:', error);
-            Alert.alert('오류', '네트워크 연결 또는 서버 주소를 확인해주세요.');
-        }
-    };
-    
-    // ⭐️ 소셜 로그인 처리 함수
-    const handleSocialLogin = (provider) => {
-        let url;
-        
-        switch (provider) {
-            case '네이버':
-                url = `${SERVER_HOST}/oauth2/authorization/naver`;
-                break;
-            case '카카오':
-                url = `${SERVER_HOST}/oauth2/authorization/kakao`;
-                break;
-            case '구글':
-                url = `${SERVER_HOST}/oauth2/authorization/google`;
-                break;
-            case '애플':
-                console.log("애플 로그인은 현재 미지원");
-                return; 
-            default:
-                return;
-        }
+                // } else {
+                //     alert('로그인 처리 중 사용자 정보를 찾을 수 없습니다. (서버 응답 구조 확인 필요)');
+                //     console.error('응답 구조 오류: data 필드가 없습니다.', data);
+                // }
 
-        Linking.openURL(url).catch(err => console.error('소셜 로그인 링크 열기 실패:', err));
-        console.log(`[${provider}] 로그인 시도 URL: ${url}`);
+
+            } else {
+                // 로그인 실패 (4xx, 5xx)
+                const errorData = await response.json();
+                // 서버에서 보낸 메시지나 기본 상태 메시지 보여줌
+                alert(`로그인 실패: ${errorData.msg || response.statusText}`); 
+                console.error('로그인 실패 응답:', errorData);
+            }
+          }
+      } catch (error) {
+          // 네트워크 연결 자체의 오류 (타임아웃, 서버 연결 불가 등)
+          console.error('네트워크 오류:', error);
+          alert('네트워크 연결에 문제가 발생했습니다. 확인 후 다시 시도해 주세요.');
+      }
+  };
+
+    // 소셜 로그인 버튼은 아직 기능 구현 안 함 (콘솔에만 찍음)
+    const handleSocialLogin = (provider) => {
+        console.log(`${provider} 로그인 시도`);
     };
 
     return (
         <ScrollView contentContainerStyle={styles.container}>
             <Text style={styles.title}>로그인</Text>
 
+            {/* 이메일 입력창 */}
             <TextInput
                 style={styles.input}
                 placeholder="아이디(이메일)"
                 placeholderTextColor="#666666"
                 value={email}
                 onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
+                keyboardType="email-address" // 이메일 형식 키보드
             />
 
+            {/* 비밀번호 입력창 */}
             <TextInput
                 style={styles.input}
                 placeholder="비밀번호"
                 placeholderTextColor="#666666"
-                secureTextEntry
+                secureTextEntry // 비밀번호 * 표시
                 value={password}
                 onChangeText={setPassword}
             />
 
+            {/* 정보 찾기 버튼 */}
             <View style={styles.infoContainer}>
                 <TouchableOpacity style={styles.infoButton}>
                     <Text style={styles.infoText}>정보찾기</Text>
                 </TouchableOpacity>
             </View>
 
+            {/* 메인 로그인 버튼 */}
             <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
                 <Text style={styles.loginButtonText}>로그인</Text>
             </TouchableOpacity>
 
             <Text style={styles.orText}>또는</Text>
 
+            {/* 소셜 로그인 버튼들 */}
             <TouchableOpacity style={[styles.socialButton, { backgroundColor: '#03C75A' }]} onPress={() => handleSocialLogin('네이버')}>
                 <Text style={styles.socialButtonText}>네이버 로그인</Text>
             </TouchableOpacity>
@@ -158,6 +145,7 @@ export default function LoginScreen({ navigation }) {
                 <Text style={styles.socialButtonText}>애플 로그인</Text>
             </TouchableOpacity>
 
+            {/* 회원가입으로 이동 */}
             <TouchableOpacity onPress={() => navigation.navigate('Register')}>
                 <Text style={styles.bottomText}>
                     NoRush가 처음이신가요? <Text style={styles.linkText}>회원가입</Text>
@@ -167,6 +155,7 @@ export default function LoginScreen({ navigation }) {
     );
 }
 
+// 스타일 시트
 const styles = StyleSheet.create({
     container: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', padding: 20, backgroundColor: '#ffffff' },
     title: { fontSize: 28, fontWeight: 'bold', marginBottom: 24 },

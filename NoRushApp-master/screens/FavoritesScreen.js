@@ -62,8 +62,8 @@ export default function FavoritesScreen({ navigation }) {
 
     // 즐겨찾기 리스트 항목 클릭 시 경로 재검색 화면으로 이동 (중첩 네비게이션 처리)
     const handleOpenRoute = (item) => {
-        navigation.navigate("Main", { // 1. 'Main' 탭으로 먼저 이동
-            screen: "RouteResults", // 2. Main 스택 안의 'RouteResults' 스크린 호출
+        navigation.navigate("Home", { // 1. 'Home' 탭으로 먼저 이동
+            screen: "RouteResults", // 2. Home 스택 안의 'RouteResults' 스크린 호출
             params: {
                 from: item.start,   // 출발역, 도착역 정보만 파라미터로 전달
                 to: item.end,
