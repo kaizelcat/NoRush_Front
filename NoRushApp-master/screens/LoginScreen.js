@@ -33,7 +33,10 @@ export default function LoginScreen({ navigation }) {
             const responseData = await response.json(); 
 
             // 2. HTTP 상태 코드와 서버 응답 상태 동시 확인
-            if (response.ok && responseData.status === '201') { 
+            if (response.ok) { // ✅ HTTP 상태 코드가 200번대인지 확인하는 것만으로 충분합니다.
+                   // 서버 내부 status 코드가 201(숫자)이면, '201' (문자열)과 비교할 때 실패합니다.
+                   // response.ok만 확인하는 것이 가장 안전합니다.
+                   // ... 로그인 성공 처리 로직 (토큰 저장 등)
                 const { accessToken, refreshToken, userInfo } = responseData.data;
 
                 // 3. 토큰과 사용자 정보 저장 (AsyncStorage)
@@ -47,11 +50,10 @@ export default function LoginScreen({ navigation }) {
                 
                 // 4. 메인 화면으로 이동
                 Alert.alert('로그인 성공', `환영합니다! ${userInfo.email || email}`);
-                // replace를 사용하면 뒤로가기 버튼으로 로그인 화면으로 돌아가지 못하게 합니다.
-                navigation.replace('Main'); 
-            } else {
+                navigation.replace('Main');
+                } else {
                 // 로그인 실패 처리 (서버에서 받은 메시지 사용)
-                Alert.log('로그인 실패', responseData.msg || '아이디 또는 비밀번호가 올바르지 않습니다.');
+                Alert.alert('로그인 실패', responseData.msg || '아이디 또는 비밀번호가 올바르지 않습니다.');
                 console.error('로그인 실패 응답:', responseData);
             }
         } catch (error) {
