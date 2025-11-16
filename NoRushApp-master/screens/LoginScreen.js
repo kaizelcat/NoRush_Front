@@ -1,7 +1,10 @@
 import { useState } from 'react';
 import { Linking, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Alert } from 'react-native';
+// ⭐️ 토큰 저장을 위해 AsyncStorage 반드시 필요
+import AsyncStorage from '@react-native-async-storage/async-storage'; 
 
-// ⭐️ AI 서버 IP 주소와 포트 적용
+// 🚨 BASE_URL은 setting.js에서 import 해야 하나, 현재 충돌 상황이므로
+// 안전을 위해 외부 서버 IP를 직접 사용하며, setting.js의 BASE_URL 값을 참고합니다.
 const SERVER_HOST = 'http://54.180.137.9:8080'; 
 const LOGIN_ENDPOINT = '/api/v1/auth/signin';
 
@@ -9,7 +12,6 @@ export default function LoginScreen({ navigation }) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
 
-    // ⭐️ 일반 로그인 처리 함수 (API 연동)
     const handleLogin = async () => {
         if (!email || !password) {
             Alert.alert('로그인 오류', '이메일과 비밀번호를 모두 입력해주세요.');
@@ -24,35 +26,45 @@ export default function LoginScreen({ navigation }) {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ email, password }), // 서버 요구 형식 (email, password)
+                body: JSON.stringify({ email, password }),
             });
 
-            const responseData = await response.json();
+            // 1. 응답 본문 파싱 (성공/실패 무관하게 JSON 파싱 시도)
+            const responseData = await response.json(); 
 
-            if (response.ok && responseData.status === '201') { // ⭐️ 성공 조건: HTTP 200/201 및 서버 상태 코드 201
-                // 1. 액세스 토큰 저장 (추후 API 호출 시 필요)
-                const accessToken = responseData.data.accessToken;
-                console.log("로그인 성공! Access Token:", accessToken);
+            // 2. HTTP 상태 코드와 서버 응답 상태 동시 확인
+            if (response.ok && responseData.status === '201') { 
+                const { accessToken, refreshToken, userInfo } = responseData.data;
+
+                // 3. 토큰과 사용자 정보 저장 (AsyncStorage)
+                await AsyncStorage.setItem('ACCESS_TOKEN', accessToken);
+                await AsyncStorage.setItem('REFRESH_TOKEN', refreshToken);
+                if (userInfo) {
+                    await AsyncStorage.setItem('USER_INFO', JSON.stringify(userInfo));
+                }
+
+                console.log('로그인 성공! Access Token 저장 완료');
                 
-                // 2. 메인 화면으로 이동
-                Alert.alert('로그인 성공', `환영합니다! ${responseData.data.userInfo.email}`);
-                navigation.navigate('Main'); // ⭐️ 네비게이터에 정의된 메인 화면 경로로 이동
+                // 4. 메인 화면으로 이동
+                Alert.alert('로그인 성공', `환영합니다! ${userInfo.email || email}`);
+                // replace를 사용하면 뒤로가기 버튼으로 로그인 화면으로 돌아가지 못하게 합니다.
+                navigation.replace('Main'); 
             } else {
-                // 로그인 실패 처리
-                Alert.alert('로그인 실패', responseData.msg || '아이디 또는 비밀번호가 올바르지 않습니다.');
+                // 로그인 실패 처리 (서버에서 받은 메시지 사용)
+                Alert.log('로그인 실패', responseData.msg || '아이디 또는 비밀번호가 올바르지 않습니다.');
+                console.error('로그인 실패 응답:', responseData);
             }
         } catch (error) {
-            console.error('로그인 중 네트워크 오류 발생:', error);
-            Alert.alert('오류', '네트워크 연결 상태를 확인해주세요. 서버 주소/포트 확인 필요');
+            console.error('네트워크 오류:', error);
+            Alert.alert('오류', '네트워크 연결 또는 서버 주소를 확인해주세요.');
         }
     };
     
-    // ⭐️ 소셜 로그인 처리 함수 (기존 코드 유지)
+    // ⭐️ 소셜 로그인 처리 함수
     const handleSocialLogin = (provider) => {
         let url;
         
         switch (provider) {
-            // ⭐️ 소셜 로그인 URL도 서버 주소에 맞게 수정
             case '네이버':
                 url = `${SERVER_HOST}/oauth2/authorization/naver`;
                 break;
@@ -70,7 +82,6 @@ export default function LoginScreen({ navigation }) {
         }
 
         Linking.openURL(url).catch(err => console.error('소셜 로그인 링크 열기 실패:', err));
-        
         console.log(`[${provider}] 로그인 시도 URL: ${url}`);
     };
 

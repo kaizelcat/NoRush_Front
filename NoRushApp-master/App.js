@@ -12,6 +12,9 @@ import RouteResultScreen from'./screens/RouteResultsScreen';
 // Navigation
 import MainTabs from './navigation/MainTabs';
 
+// 회원수정
+import EditProfile from './screens/EditProfile';
+
 const Stack = createNativeStackNavigator();
 
 export default function App() {
@@ -38,6 +41,11 @@ export default function App() {
             name="RouteResult"
             component={RouteResultScreen}
             options={{title: '경로 결과'}}
+          />
+          <Stack.Screen
+            name="EditProfile"
+            component={EditProfile}
+            options={{ title: '회원정보 수정' }}
           />
 
         </Stack.Navigator>

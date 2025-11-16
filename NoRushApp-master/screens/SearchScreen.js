@@ -1,100 +1,253 @@
-import { FontAwesome5, Ionicons, MaterialIcons } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
-import { useState } from "react";
-import {
+// 해당 페이지 삭제 후 RouteResultsScreen.js와 통합
+
+import React, { useState } from 'react';
+import { 
+  View, 
+  Text, 
+  TextInput, 
+  TouchableOpacity, 
+  ActivityIndicator, 
+  Alert,
   ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
+  StyleSheet
+} from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { MaterialIcons, Ionicons, FontAwesome5 } from '@expo/vector-icons';
+
+const API_URL = "-";
+
+// 혼잡도 예측값 (0~100)을 레벨로 변환
+const getCongestionLevel = (value) => {
+  if (value >= 80) return '매우 혼잡';
+  if (value >= 60) return '혼잡';
+  if (value >= 30) return '보통';
+  return '여유';
+};
+
+// 현재 시간을 'YYYY-MM-DDTHH:mm:ss' 형식으로 반환
+const getCurrentDatetime = () => {
+  const date = new Date();
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const seconds = String(date.getSeconds()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+};
 
 export default function SearchScreen() {
-    const [startPoint, setStartPoint] = useState("");
-    const [endPoint, setEndPoint] = useState("");
-    const navigation = useNavigation();
+  const navigation = useNavigation();
+  Alert.alert("검색 실패", "내용확인중");
+  const [startPoint, setStartPoint] = useState('');
+  const [endPoint, setEndPoint] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-    const handleSearch = () => {
-        if (!startPoint || !endPoint) return;
+  const handleSearch = async () => {
+    if (!startPoint || !endPoint || isLoading) {
+      Alert.alert("필수 입력", "출발지와 도착지를 모두 입력해주세요.");
+      return;
+    }
 
-        navigation.navigate("RouteResults", { 
-            startPoint, 
-            endPoint 
-        });
-    };
+    setIsLoading(true);
 
-    const swapLocations = () => {
-        const temp = startPoint;
-        setStartPoint(endPoint);
-        setEndPoint(temp);
-    };
+    try {
+      // 토큰 가져오기
+      const accessToken = await AsyncStorage.getItem("ACCESS_TOKEN");
+      if (!accessToken) {
+        Alert.alert("인증 오류", "로그인 정보가 없습니다.");
+        return;
+      }
+      console.log("사용할 토큰:", accessToken);
 
-    const quickActions = [
-        { icon: "home", label: "집", color: "#e0f2fe" },
-        { icon: "briefcase", label: "직장", color: "#dcfce7" },
-        { icon: "star", label: "즐겨찾기", color: "#f3e8ff" },
-    ];
+      // const userInfo = JSON.parse(userInfoString);
+      // const token = userInfo?.data?.accessToken;
+      // console.log("사용할 토큰:", token);
 
-    const recentSearches = [
-        { from: "Central Park", to: "Times Square", time: "2 hours ago" },
-        { from: "Brooklyn Bridge", to: "SoHo", time: "Yesterday" },
-    ];
+      if (!accessToken) {
+        Alert.alert("인증 오류", "Access Token이 없습니다.");
+        setIsLoading(false);
+        return;
+      }
 
-    return (
-        <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
-            <View style={styles.section}>
-                <View style={styles.card}>
-                    <View style={styles.inputRow}>
-                        <View style={styles.dotGreen} />
-                        <TextInput
-                            style={styles.input}
-                            placeholder="출발지"
-                            value={startPoint}
-                            onChangeText={setStartPoint}
-                        />
-                        <TouchableOpacity
-                            style={styles.iconBtn}
-                            onPress={() => setStartPoint("현재 위치")}
-                        >
-                            <MaterialIcons name="my-location" size={20} color="gray" />
-                        </TouchableOpacity>
-                    </View>
+      // console.log("token 가져옴", accessToken);
 
-                    <View style={styles.centered}>
-                        <TouchableOpacity style={styles.swapBtn} onPress={swapLocations}>
-                            <MaterialIcons name="swap-vert" size={24} color="#4b5563" />
-                        </TouchableOpacity>
-                    </View>
+      const currentDatetime = getCurrentDatetime();
+      const requestBody = {
+        from: startPoint,
+        to: endPoint,
+        datetime: currentDatetime,
+      };
 
-                    <View style={styles.inputRow}>
-                        <View style={styles.dotRed} />
-                        <TextInput
-                            style={styles.input}
-                            placeholder="도착지"
-                            value={endPoint}
-                            onChangeText={setEndPoint}
-                        />
-                        <View style={styles.iconBtn} />
-                    </View>
+      console.log("현재 requestBody",requestBody);
+      console.log("API 요청 시작:", requestBody);
 
-                    <View style={styles.timeRow}>
-                        <Ionicons name="time-outline" size={16} color="#2563eb" />
-                        <Text style={styles.timeText}>출발 시간</Text>
-                    </View>
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`, 
+        },
+        body: JSON.stringify(requestBody),
+      });
 
-                    <TouchableOpacity
-                        style={[styles.searchBtn, (!startPoint || !endPoint) && styles.disabledBtn]}
-                        onPress={handleSearch}
-                        disabled={!startPoint || !endPoint}
-                    >
-                        <Ionicons name="search" size={18} color="white" style={{ marginRight: 6 }} />
-                        <Text style={styles.searchBtnText}>검색</Text>
-                    </TouchableOpacity>
-                </View>
+      console.log("응답 상태:", response.status);
 
-                <Text style={styles.sectionTitle}>퀵 메뉴</Text>
-                <View style={styles.quickGrid}>
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`API 호출 실패: ${response.status} - ${errorText}`);
+      }
+
+      const apiResponse = await response.json();
+      console.log("API 응답:", apiResponse);
+
+      const mainRoute = apiResponse?.result?.route?.[0];
+      if (!mainRoute) {
+        Alert.alert("검색 결과 없음", "해당 경로에 대한 정보를 찾을 수 없습니다.");
+        return;
+      }
+
+      const info = mainRoute.info;
+
+      // 모든 section을 변환
+      const transformedSegments = Array.isArray(mainRoute.section)
+  ? mainRoute.section.map(segment => {
+      const isSubway = segment.trafficType === 1;
+      const isWalk = segment.trafficType === 3;
+
+      let line = segment.trafficName || (isSubway ? '지하철' : isWalk ? '도보' : '기타');
+      let cars = [];
+
+      if (isSubway && segment.passStopList?.stations?.length > 0) {
+        // 모든 역을 돌면서 혼잡도 데이터 반영
+        cars = segment.passStopList.stations.flatMap(station =>
+          (station.predictedCongestionCar || []).map((value, index) => ({
+            car: `${index + 1}`,
+            level: getCongestionLevel(value),
+            value,
+            station: station.stationName,
+          }))
+        );
+      }
+
+      return {
+        line,
+        from: segment.startName || mainRoute.info.firstStartStation,
+        to: segment.endName || mainRoute.info.lastEndStation,
+        cars,
+        summary: segment.sectionSummary || null,
+      };
+    })
+  : [];
+
+
+      const routeData = {
+        id: info.mapObj,
+        start: info.firstStartStation,
+        end: info.lastEndStation,
+        etaMinutes: info.totalTime,
+        customName: `${info.firstStartStation} → ${info.lastEndStation}`,
+        segments: transformedSegments,
+        alternatives: [
+          { time: '07:30', etaMinutes: info.totalTime - 10, avgCongestion: '여유' },
+          { time: '08:45', etaMinutes: info.totalTime + 5, avgCongestion: '보통' },
+          { time: '18:00', etaMinutes: info.totalTime + 15, avgCongestion: '매우 혼잡' },
+        ]
+      };
+
+      console.log("전달할 routeData:", routeData);
+
+      navigation.navigate("RouteResults", { routeData });
+
+    } catch (error) {
+      console.error(" 경로 검색 중 오류 발생:", error);
+      Alert.alert("검색 실패", "경로를 찾지 못했습니다. 잠시 후 다시 시도해 주세요.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const swapLocations = () => {
+    const temp = startPoint;
+    setStartPoint(endPoint);
+    setEndPoint(temp);
+  };
+
+  const quickActions = [
+    { icon: "home", label: "집", color: "#e0f2fe" },
+    { icon: "briefcase", label: "직장", color: "#dcfce7" },
+    { icon: "star", label: "즐겨찾기", color: "#f3e8ff" },
+  ];
+
+  const recentSearches = [
+    { from: "Central Park", to: "Times Square", time: "2 hours ago" },
+    { from: "Brooklyn Bridge", to: "SoHo", time: "Yesterday" },
+  ];
+
+  return (
+    <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
+      <View style={styles.section}>
+        <View style={styles.card}>
+          <View style={styles.inputRow}>
+            <View style={styles.dotGreen} />
+            <TextInput
+              style={styles.input}
+              placeholder="출발지"
+              value={startPoint} 
+              onChangeText={setStartPoint}
+            />
+            <TouchableOpacity
+              style={styles.iconBtn}
+              onPress={() => setStartPoint("현재 위치")}
+            >
+              <MaterialIcons name="my-location" size={20} color="gray" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.centered}>
+            <TouchableOpacity style={styles.swapBtn} onPress={swapLocations}>
+              <MaterialIcons name="swap-vert" size={24} color="#4b5563" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.inputRow}>
+            <View style={styles.dotRed} />
+            <TextInput
+              style={styles.input}
+              placeholder="도착지"
+              value={endPoint} 
+              onChangeText={setEndPoint}
+            />
+            <View style={styles.iconBtn} />
+          </View>
+
+          
+          <View style={styles.timeRow}>
+            <Ionicons name="time-outline" size={16} color="#2563eb" />
+            <Text style={styles.timeText}>출발 시간 (현재 시각으로 검색)</Text>
+          </View>
+
+         
+          <TouchableOpacity
+            style={[styles.searchBtn, (!startPoint || !endPoint || isLoading) && styles.disabledBtn]}
+            onPress={handleSearch}
+            disabled={!startPoint || !endPoint || isLoading}
+          >
+            {isLoading ? (
+              <ActivityIndicator size="small" color="white" />
+            ) : (
+              <>
+                <Ionicons name="search" size={18} color="white" style={{ marginRight: 6 }} />
+                <Text style={styles.searchBtnText}>경로 검색</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+
+       
+        <Text style={styles.sectionTitle}>퀵 메뉴</Text>
+        <View style={styles.quickGrid}>
                     {quickActions.map((action, idx) => (
                         <TouchableOpacity key={idx} style={styles.quickItem}>
                             <View style={[styles.quickIconWrapper, { backgroundColor: action.color }]}>
@@ -121,6 +274,8 @@ export default function SearchScreen() {
         </ScrollView>
     );
 }
+
+
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: "#f0f8ff" },

@@ -1,4 +1,4 @@
-// MainScreen.js
+// MainScreen.js (충돌 해결 완료)
 
 import { useNavigation } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
@@ -54,7 +54,7 @@ const MainScreen = () => {
     })();
   }, []);
 
-  // '내 위치' 버튼 클릭 시 호출 (현재는 좌표를 입력창에 넣지만, 서버 요구에 맞게 장소 이름 입력이 필요함을 안내)
+  // '내 위치' 버튼 클릭 시 호출
   const handleUseMyLocation = async (setter) => {
     const coords = await getMyCoordinates();
     if (!coords) {
@@ -64,44 +64,43 @@ const MainScreen = () => {
     
     console.log('내 좌표(lat, lng):', coords.latitude, coords.longitude);
     setUserLocation(coords); 
-    // ⚠️ 서버가 장소 이름을 요구하므로, 여기서는 좌표 대신 사용자가 장소 이름을 입력하도록 안내 필요.
-    // 임시로 좌표를 입력창에 넣는 기능은 유지하되, 서버 API는 장소 이름으로 요청됨.
+    // 서버는 장소 이름을 요구하므로, 임시로 좌표를 넣지만, 사용자에게 변경 안내
     setter(`${coords.latitude.toFixed(5)}, ${coords.longitude.toFixed(5)}`); 
     Alert.alert('안내', '경로 검색을 위해 입력창의 좌표를 장소 이름(예: 서울역)으로 변경해주세요.');
   };
 
-  // ⭐️ 경로 추천 API 호출 로직 (최종 수정)
+  // ⭐️ [충돌 해결 완료] API 연동 로직 채택
   const handleSearch = async () => {
     if (!startStation || !endStation) {
       Alert.alert('알림', '출발지와 도착지를 모두 입력해주세요.');
       return;
     }
-    
-    // ⚠️ 현재 입력창에 좌표가 들어있을 수 있으므로, 좌표가 아닌 장소 이름이 입력되었는지 확인해야 합니다.
+
+    // 1. 팀원 코드를 반영하여 키보드 닫기
+    Keyboard.dismiss(); 
+
+    // 2. 좌표 입력 방지 유효성 검사 (사용자 코드 채택)
     if (startStation.includes(',') || endStation.includes(',')) {
         Alert.alert('입력 오류', '출발지와 도착지는 "서울역"과 같은 장소 이름으로 입력해야 합니다.');
         return;
     }
 
-    Keyboard.dismiss();
-
-    // 서버가 요구하는 형식: YYYY-MM-DDTHH:MM:00
+    // 3. 서버가 요구하는 datetime 형식 생성 (사용자 코드 채택)
     const now = new Date();
     const datetime = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}T${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:00`;
-
 
     try {
         console.log(`📡 경로 검색 요청: ${startStation} -> ${endStation} at ${datetime}`);
 
-        // 2. API 호출
+        // 4. API 호출
         const response = await fetch(`${SERVER_URL}${API_ENDPOINT}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                from: startStation, // ⭐️ 서버 요구: 장소 이름
-                to: endStation,     // ⭐️ 서버 요구: 장소 이름
+                from: startStation, // ⭐️ 장소 이름
+                to: endStation,     // ⭐️ 장소 이름
                 datetime: datetime, 
             }),
         });
@@ -117,7 +116,7 @@ const MainScreen = () => {
             console.log('✅ API 응답 성공, RouteResults로 이동');
             
             navigation.navigate('RouteResults', {
-                routeData: responseData.result, // 서버 응답의 result 필드 전달
+                routeData: responseData.result,
                 customName: `${startStation} → ${endStation}`, 
             });
         } else {
@@ -130,14 +129,12 @@ const MainScreen = () => {
     }
   };
   
-  // ... (swapLocations 함수는 동일) ...
   const swapLocations = () => {
     const temp = startStation;
     setStartStation(endStation);
     setEndStation(temp);
   };
 
-  // ... (로딩 화면 UI는 동일) ...
   if (!userLocation) {
     return (
       <View style={styles.loadingContainer}>
@@ -159,7 +156,7 @@ const MainScreen = () => {
             <View className="locationRow" style={styles.locationRow}>
               <TextInput
                 style={styles.searchInput}
-                placeholder="출발지 (예: 서울역)" // ⭐️ 장소 이름 입력 유도
+                placeholder="출발지 (예: 서울역)" // ⭐️ 사용자 코드로 최종 채택
                 placeholderTextColor="#888"
                 value={startStation}
                 onChangeText={setStartStation}
@@ -183,7 +180,7 @@ const MainScreen = () => {
             <View style={[styles.locationRow, { marginTop: 10 }]}>
               <TextInput
                 style={styles.searchInput}
-                placeholder="도착지 (예: 홍대입구역)" // ⭐️ 장소 이름 입력 유도
+                placeholder="도착지 (예: 홍대입구역)" // ⭐️ 사용자 코드로 최종 채택
                 placeholderTextColor="#888"
                 value={endStation}
                 onChangeText={setEndStation}

@@ -1,62 +1,102 @@
+// RegisterScreen.js (충돌 해결 및 기능 통합 완료)
+
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator } from 'react-native';
 
-// ⭐️ 서버 정보 설정
+// ⭐️ 서버 정보 설정 (사용자님의 HEAD 코드로 확정)
 const SERVER_HOST = 'http://54.180.137.9:8080'; 
-const REGISTER_ENDPOINT = '/api/v1/auth/signup'; // 일반적인 FastAPI 회원가입 엔드포인트 가정
+const REGISTER_ENDPOINT = '/api/v1/auth/signup'; 
+// BASE_URL은 setting.js에서 import 해야 하나, 충돌 시 안전을 위해 직접 URL 사용
 
 export default function RegisterScreen({ navigation }) {
     const [form, setForm] = useState({
         name: '',
         email: '',
-        phone: '',
+        // ⭐️ 필드 이름: 팀원 코드(upstream)의 'phoneNumber'로 통일
+        phoneNumber: '', 
         password: ''
     });
-    const [isLoading, setIsLoading] = useState(false); // 로딩 상태 추가
+    // ⭐️ 로딩 상태와 필드별 에러 상태 모두 사용 (두 코드의 장점 통합)
+    const [isLoading, setIsLoading] = useState(false); 
+    const [fieldErrors, setFieldErrors] = useState({});
 
     const handleChange = (key, value) => {
         setForm({ ...form, [key]: value });
     };
 
-    // ⭐️ 회원가입 API 호출 로직 추가
-// RegisterScreen.js 파일 내부의 handleSubmit 함수
-
+    // ⭐️ 회원가입 API 호출 로직 (두 버전 통합 및 보강)
     const handleSubmit = async () => {
         if (isLoading) return;
 
-        // 1. 유효성 검사 (간단 버전)
-        if (!form.name || !form.email || !form.phone || !form.password) {
-            Alert.alert('오류', '모든 정보를 입력해주세요.');
+        // 1. 프론트엔드 유효성 검사 (필수 정보 누락 체크)
+        if (!form.name || !form.email || !form.phoneNumber || !form.password) {
+            Alert.alert('필수 정보 누락', '모든 정보를 입력해주세요.');
             return;
         }
 
-        // ⭐️ 전화번호에서 하이픈(-)을 제거하고 순수 숫자만 추출
-        const cleanPhone = form.phone.replace(/-/g, '');
-
-        console.log('회원가입 시도:', { ...form, phone: cleanPhone });
+        // 요청할 때마다 이전 에러 초기화
+        setFieldErrors({});
         setIsLoading(true);
 
+        // ⭐️ 전화번호에서 하이픈(-)을 제거하고 순수 숫자만 추출 (사용자 코드 채택)
+        const cleanPhone = form.phoneNumber.replace(/-/g, '');
+        
+        // ⭐️ 서버에 전송할 최종 데이터 (cleanPhone 사용)
+        const dataToSend = {
+            name: form.name,
+            email: form.email,
+            phoneNumber: cleanPhone, // 클렌징된 전화번호 사용
+            password: form.password,
+        };
+
         try {
+            console.log('회원가입 시도 데이터:', dataToSend);
+            
             const response = await fetch(`${SERVER_HOST}${REGISTER_ENDPOINT}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                // ⭐️ 수정된 cleanPhone 값을 전송
-                body: JSON.stringify({ ...form, phone: cleanPhone }), 
+                body: JSON.stringify(dataToSend), 
             });
 
-            const responseData = await response.json();
+            // 2. 서버 응답 처리 (팀원 코드의 견고한 파싱 로직 채택)
+            const responseText = await response.text(); 
+            let data = null;
             
-            if (response.ok && responseData.status === '201') { 
-                Alert.alert('회원가입 성공', '회원가입이 완료되었습니다. 로그인 해주세요.');
-                navigation.navigate('Login'); 
-            } else {
-                Alert.alert('회원가입 실패', responseData.msg || '이미 존재하는 사용자이거나 서버 오류입니다.');
+            try {
+                data = JSON.parse(responseText);
+            } catch (jsonError) {
+                console.error('JSON 파싱 오류:', jsonError);
             }
-        } catch (error) {
-            console.error('회원가입 중 네트워크 오류 발생:', error);
-            Alert.alert('오류', '서버와 통신할 수 없습니다. IP 주소 및 네트워크 상태를 확인하세요.');
+
+            if (response.ok) { 
+                console.log('회원가입 성공:', data);
+                Alert.alert('성공', '회원가입에 성공했습니다! 로그인 페이지로 이동합니다.');
+                navigation.navigate('Login'); 
+            } else { 
+                console.log("회원가입 실패 (응답:", data);
+                
+                // 3. 필드별 오류 메시지 처리 (팀원 코드 채택)
+                if(data && Array.isArray(data.errors)) {
+                    const mappedErrors = {};
+                    data.errors.forEach((err) => {
+                        mappedErrors[err.field] = err.reason; // 첫 번째 에러 메시지만 사용
+                    });
+                    setFieldErrors(mappedErrors); // 인풋 밑에 표시
+                    Alert.alert('입력 오류', '입력된 정보를 확인해주세요.');
+                    return;
+                }
+
+                // errors 배열이 없을 때 일반적인 메시지 표시
+                const msg =
+                    (data && (data.resultMsg || data.message)) ||
+                    '서버에서 오류가 발생했습니다. 다시 시도해 주세요.';
+                Alert.alert('회원가입 실패', msg);
+            }
+        } catch (error) { 
+            console.error('네트워크 또는 요청 오류:', error);
+            Alert.alert('오류', '네트워크 연결 상태를 확인하거나 서버 관리자에게 문의하세요.');
         } finally {
             setIsLoading(false);
         }
@@ -73,6 +113,8 @@ export default function RegisterScreen({ navigation }) {
                 value={form.name}
                 onChangeText={(value) => handleChange('name', value)}
             />
+            {fieldErrors.name && (<Text style={styles.errorText}>{fieldErrors.name}</Text>)}
+            
 
             <TextInput
                 style={styles.input}
@@ -83,15 +125,20 @@ export default function RegisterScreen({ navigation }) {
                 keyboardType="email-address"
                 autoCapitalize="none"
             />
+            {fieldErrors.email && (<Text style={styles.errorText}>{fieldErrors.email}</Text>)}
+            
 
             <TextInput
                 style={styles.input}
-                placeholder="전화번호"
+                placeholder="전화번호 (하이픈 없이)"
                 placeholderTextColor="#666666"
-                value={form.phone}
-                onChangeText={(value) => handleChange('phone', value)}
+                // ⭐️ form.phoneNumber로 변경
+                value={form.phoneNumber} 
+                onChangeText={(value) => handleChange('phoneNumber', value)}
                 keyboardType="phone-pad"
             />
+            {fieldErrors.phoneNumber && (<Text style={styles.errorText}>{fieldErrors.phoneNumber}</Text>)}
+            
 
             <TextInput
                 style={styles.input}
@@ -101,6 +148,8 @@ export default function RegisterScreen({ navigation }) {
                 value={form.password}
                 onChangeText={(value) => handleChange('password', value)}
             />
+            {fieldErrors.password && (<Text style={styles.errorText}>{fieldErrors.password}</Text>)}
+            
 
             <TouchableOpacity style={styles.button} onPress={handleSubmit} disabled={isLoading}>
                 {isLoading ? (
@@ -123,6 +172,13 @@ const styles = StyleSheet.create({
     container: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', padding: 20, backgroundColor: '#ffffff' },
     title: { fontSize: 28, fontWeight: 'bold', marginBottom: 24 },
     input: { width: '100%', borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12, marginBottom: 12, fontSize: 16 },
+    // ⭐️ 에러 텍스트 스타일 (팀원 코드 채택)
+    errorText: { 
+        width: '100%',
+        color: 'red',
+        fontSize: 12,
+        marginBottom: 8,
+    },
     button: { backgroundColor: '#2196F3', paddingVertical: 14, borderRadius: 8, width: '100%', alignItems: 'center', marginBottom: 12 },
     buttonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
     bottomText: { marginTop: 16, fontSize: 14, color: '#333' },
