@@ -1,5 +1,5 @@
 // MainScreen.js (충돌 해결 완료)
-
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import {
@@ -23,6 +23,15 @@ import * as Location from 'expo-location';
 const SERVER_URL = 'http://54.180.137.9:8080'; 
 const API_ENDPOINT = '/api/v1/route/predict/station'; 
 
+const getAccessToken = async () => {
+    try {
+        const token = await AsyncStorage.getItem('ACCESS_TOKEN');
+        return token;
+    } catch (e) {
+        console.error('Failed to retrieve token', e);
+        return null;
+    }
+};
 
 const MainScreen = () => {
   const navigation = useNavigation();
@@ -150,61 +159,62 @@ const MainScreen = () => {
         <View style={styles.container}>
           <StatusBar style="dark-content" />
 
-          {/* === Search Container UI === */}
-          <View style={styles.searchContainer}>
-            {/* 출발지 입력 */}
-            <View className="locationRow" style={styles.locationRow}>
-              <TextInput
-                style={styles.searchInput}
-                placeholder="출발지 (예: 서울역)" // ⭐️ 사용자 코드로 최종 채택
-                placeholderTextColor="#888"
-                value={startStation}
-                onChangeText={setStartStation}
-              />
-              <TouchableOpacity
-                style={styles.locationIconWrapper}
-                onPress={() => handleUseMyLocation(setStartStation)}
-              >
-                <MaterialIcons name="my-location" size={20} color="#777" />
-              </TouchableOpacity>
-            </View>
-
-            {/* Swap 버튼 */}
-            <View style={styles.centered}>
-              <TouchableOpacity style={styles.swapBtn} onPress={swapLocations}>
-                <MaterialIcons name="swap-vert" size={24} color="#4b5563" />
-              </TouchableOpacity>
-            </View>
-
-            {/* 도착지 입력 */}
-            <View style={[styles.locationRow, { marginTop: 10 }]}>
-              <TextInput
-                style={styles.searchInput}
-                placeholder="도착지 (예: 홍대입구역)" // ⭐️ 사용자 코드로 최종 채택
-                placeholderTextColor="#888"
-                value={endStation}
-                onChangeText={setEndStation}
-              />
-              <TouchableOpacity
-                style={styles.locationIconWrapper}
-                onPress={() => handleUseMyLocation(setEndStation)}
-              >
-                <MaterialIcons name="my-location" size={20} color="#777" />
-              </TouchableOpacity>
-            </View>
-
-            {/* 검색 버튼 */}
-            <TouchableOpacity style={styles.findPathButton} onPress={handleSearch}>
-              <Text style={styles.buttonText}>경로 검색</Text>
-            </TouchableOpacity>
-          </View>
-
           {/* === Map Container === */}
           <View style={styles.mapContainer}>
             <KakaoMapView 
                 style={styles.mapView} 
                 initialLocation={userLocation}
             />
+          </View>
+
+          {/* === Search Box (Overlay) === */}
+          <View style={styles.searchBox}>
+            {/* 왼쪽: 위치 변경 버튼 */}
+            <TouchableOpacity style={styles.swapBtnLeft} onPress={swapLocations}>
+              <MaterialIcons name="swap-vert" size={24} color="#4b5563" />
+            </TouchableOpacity>
+
+            {/* 중앙: 출발지와 도착지 입력 */}
+            <View style={styles.inputsColumn}>
+              {/* 출발지 입력 */}
+              <View style={styles.locationRow}>
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="출발지"
+                  placeholderTextColor="#888"
+                  value={startStation}
+                  onChangeText={setStartStation}
+                />
+                <TouchableOpacity
+                  style={styles.locationIconWrapper}
+                  onPress={() => handleUseMyLocation(setStartStation)}
+                >
+                  <MaterialIcons name="my-location" size={20} color="#777" />
+                </TouchableOpacity>
+              </View>
+
+              {/* 도착지 입력 */}
+              <View style={[styles.locationRow, { marginTop: 6 }]}>
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="도착지"
+                  placeholderTextColor="#888"
+                  value={endStation}
+                  onChangeText={setEndStation}
+                />
+                <TouchableOpacity
+                  style={styles.locationIconWrapper}
+                  onPress={() => handleUseMyLocation(setEndStation)}
+                >
+                  <MaterialIcons name="my-location" size={20} color="#777" />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* 오른쪽: 길 찾기 버튼 */}
+            <TouchableOpacity style={styles.findPathButton} onPress={handleSearch}>
+              <Text style={styles.buttonText}>길 찾기</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </SafeAreaView>
@@ -219,7 +229,6 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    paddingHorizontal: 15,
   },
   loadingContainer: {
     flex: 1,
@@ -232,68 +241,70 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#4b5563',
   },
-  searchContainer: {
-    marginTop: 30,
-    paddingVertical: 10,
+  mapContainer: {
+    flex: 1,
+  },
+  mapView: {
+    flex: 1,
+  },
+  searchBox: {
+    position: 'absolute',
+    top: 15,
+    left: 15,
+    right: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  swapBtnLeft: {
+    width: 36,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  inputsColumn: {
+    flex: 1,
+    marginRight: 8,
   },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#f0f2f5',
-    borderRadius: 12,
-    height: 48,
+    borderRadius: 10,
+    height: 40,
     paddingHorizontal: 10,
   },
   searchInput: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 15,
     color: '#111',
   },
   locationIconWrapper: {
-    width: 26,
+    width: 24,
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 6,
   },
-  centered: {
-    alignItems: 'center',
-    marginVertical: 6,
-  },
-  swapBtn: {
-    backgroundColor: 'white',
-    borderRadius: 999,
-    padding: 6,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
   findPathButton: {
-    marginTop: 10,
-    width: '100%',
-    height: 48,
+    width: 75,
+    height: 86,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#416cec',
-    borderRadius: 12,
-    paddingHorizontal: 15,
+    borderRadius: 10,
   },
   buttonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
-  },
-  mapContainer: {
-    flex: 1,
-    borderRadius: 15,
-    overflow: 'hidden',
-    marginVertical: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  mapView: {
-    flex: 1,
   },
 });
 
