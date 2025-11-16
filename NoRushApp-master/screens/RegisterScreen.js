@@ -24,15 +24,16 @@ export default function RegisterScreen({ navigation }) {
         setForm({ ...form, [key]: value });
     };
 
-    // ⭐️ 회원가입 API 호출 로직 (두 버전 통합 및 보강)
-    const handleSubmit = async () => {
-        if (isLoading) return;
+  const handleSubmit = async () => { // ① async 함수
+    const API_URL = `http://${BASE_URL}:8080/api/v1/auth/signup`;
 
-        // 1. 프론트엔드 유효성 검사 (필수 정보 누락 체크)
-        if (!form.name || !form.email || !form.phoneNumber || !form.password) {
-            Alert.alert('필수 정보 누락', '모든 정보를 입력해주세요.');
-            return;
-        }
+    // 요청할때마다 이전 에러 초기화
+    setFieldErrors({});
+
+    if (!form.name || !form.email || !form.password) {
+      Alert.alert('필수 정보 누락', '이름, 이메일, 비밀번호를 모두 입력해주세요.');
+      return;
+    }
 
         // 요청할 때마다 이전 에러 초기화
         setFieldErrors({});

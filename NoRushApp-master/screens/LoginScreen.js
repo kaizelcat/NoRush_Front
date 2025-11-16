@@ -18,38 +18,58 @@ export default function LoginScreen({ navigation }) {
             return;
         }
 
-        console.log(`[일반 로그인] 시도: ${email}, ${password}`);
-        
-        try {
-            const response = await fetch(`${SERVER_HOST}${LOGIN_ENDPOINT}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ email, password }),
-            });
+  const LOGIN_API_URL = `http://${BASE_URL}:8080/api/v1/auth/signin`; 
 
-            // 1. 응답 본문 파싱 (성공/실패 무관하게 JSON 파싱 시도)
-            const responseData = await response.json(); 
+      try {
+          const response = await fetch(LOGIN_API_URL, {
+              method: 'POST', 
+              headers: {
+                  'Content-Type': 'application/json', 
+              },
+              // 2. 백엔드 DTO 규격에 맞춰 데이터를 JSON 문자열로 변환.
+              // DTO에서 필드 이름이 'email'과 'password'였으므로, 여기서도 그대로 사용.
+              body: JSON.stringify({ 
+                  email: email, 
+                  password: password,
+              }),
+          });
 
-            // 2. HTTP 상태 코드와 서버 응답 상태 동시 확인
-            if (response.ok) { // ✅ HTTP 상태 코드가 200번대인지 확인하는 것만으로 충분합니다.
-                   // 서버 내부 status 코드가 201(숫자)이면, '201' (문자열)과 비교할 때 실패합니다.
-                   // response.ok만 확인하는 것이 가장 안전합니다.
-                   // ... 로그인 성공 처리 로직 (토큰 저장 등)
-                const { accessToken, refreshToken, userInfo } = responseData.data;
+        // 3. 서버 응답 처리
+        if (response.ok) {
+            // HTTP 상태 코드가 200번대인 경우 (성공)
+            
+            // 1. 응답 본문을 파싱하여 'data' 변수에 저장합니다.
+            const data = await response.json(); 
+            const accessToken = data.data.accessToken;
+            const refreshToken = data.data.refreshToken;
+            
+            // 토큰 저장
+            await AsyncStorage.setItem('ACCESS_TOKEN', accessToken);
+            await AsyncStorage.setItem('REFRESH_TOKEN', refreshToken);
 
-                // 3. 토큰과 사용자 정보 저장 (AsyncStorage)
-                await AsyncStorage.setItem('ACCESS_TOKEN', accessToken);
-                await AsyncStorage.setItem('REFRESH_TOKEN', refreshToken);
-                if (userInfo) {
-                    await AsyncStorage.setItem('USER_INFO', JSON.stringify(userInfo));
-                }
-
-                console.log('로그인 성공! Access Token 저장 완료');
+            console.log('로그인 성공 응답 전체:', data);
+            
+            // 2.  수정: 'response.data.userInfo' 대신 'data.data.userInfo' 사용
+            const userInfo = data.data.userInfo; 
+            
+            // 3. 안전하게 userInfo가 존재하는지 확인 후 저장 로직 실행
+            if (userInfo) {
+                await AsyncStorage.setItem('USER_INFO', JSON.stringify(userInfo));
+                console.log('사용자 정보 저장 완료');
                 
-                // 4. 메인 화면으로 이동
-                Alert.alert('로그인 성공', `환영합니다! ${userInfo.email || email}`);
+                //const responseData = await response.json(); 
+                //console.log('로그인 성공 응답 전체:', data);
+
+                // 실제 사용자 정보가 'data' 필드 안에 들어있다고 가정
+                // mainscreen.js에서 저장해둠
+                const userData = data.data;
+
+                // if (userData) {
+                //     // AsyncStorage에 사용자 정보(토큰 포함) 저장
+                //     await AsyncStorage.setItem('USER_INFO', JSON.stringify(userData));
+                //     console.log('사용자 정보 저장 완료');
+                    
+                //     // 로그인 성공 -> 메인 화면으로 이동! 
                 navigation.replace('Main');
                 } else {
                 // 로그인 실패 처리 (서버에서 받은 메시지 사용)

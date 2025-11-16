@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
+import { BASE_URL } from '../setting';
 
 export default function EditProfile({ navigation }) {
   const [isLoading, setIsLoading] = useState(true);
@@ -28,7 +29,7 @@ export default function EditProfile({ navigation }) {
     try {
       const token = await AsyncStorage.getItem("ACCESS_TOKEN");
 
-      const response = await fetch('http://10.0.2.2:8080/api/v1/auth/me', {
+      const response = await fetch(`http://${BASE_URL}:8080/api/v1/auth/me`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -76,7 +77,7 @@ export default function EditProfile({ navigation }) {
     console.log("보내는 body:", body);
 
     try {
-      const response = await fetch('http://10.0.2.2:8080/api/v1/auth/me', {
+      const response = await fetch(`http://${BASE_URL}:8080/api/v1/auth/me`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

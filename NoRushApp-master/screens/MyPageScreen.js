@@ -2,10 +2,11 @@ import { useNavigation, useFocusEffect  } from '@react-navigation/native';
 import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator, Alert } from 'react-native';
 import React, { useState, useEffect,useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage'; // 1. AsyncStorage 임포트
+import { BASE_URL } from '../setting';
 
 // 기본 이미지 URL 
 const DEFAULT_PROFILE_IMAGE = 'https://via.placeholder.com/100';
-const LOGOUT_API_URL = 'http://10.0.2.2:8080/api/v1/auth/logout';
+const LOGOUT_API_URL = `http://${BASE_URL}:8080/api/v1/auth/logout`;
 
 const MyPage = () => {
     const navigation = useNavigation();
@@ -19,7 +20,7 @@ const MyPage = () => {
         try {
             const token = await AsyncStorage.getItem("ACCESS_TOKEN");
 
-            const res = await fetch("http://10.0.2.2:8080/api/v1/auth/me", {
+            const res = await fetch(`http://${BASE_URL}:8080/api/v1/auth/me`, {
                 method: "GET",
                 headers: { Authorization: `Bearer ${token}` }
             });
