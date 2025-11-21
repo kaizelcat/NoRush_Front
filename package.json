@@ -1,0 +1,10 @@
+{
+  "dependencies": {
+    "axios": "^1.12.2",
+    "expo": "^54.0.21"
+  },
+  "devDependencies": {
+    "@types/react": "~19.1.10",
+    "typescript": "~5.9.2"
+  }
+}

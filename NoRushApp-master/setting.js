@@ -1,0 +1,5 @@
+const KAKAO_JAVASCRIPT_KEY = "e4e3e18258be46ed1eac9b68733d1282";
+export {KAKAO_JAVASCRIPT_KEY};
+
+const BASE_URL="54.180.137.9";
+export {BASE_URL};
